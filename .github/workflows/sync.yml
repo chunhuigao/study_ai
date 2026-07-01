@@ -1,0 +1,19 @@
+name: Sync to Gitee
+
+on:
+  push:
+    branches: [main]  # 触发同步的分支
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync to Gitee
+        uses: wei/git-sync@v3
+        with:
+          ssh_private_key: ${{ secrets.GITEE_PRIVATE_KEY }}
+          source_repo: "git@github.com:chunhuigao/study_ai.git"
+          destination_repo: "git@gitee.com:你的Gitee用户名/仓库名.git"
