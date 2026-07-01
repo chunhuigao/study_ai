@@ -16,4 +16,4 @@ jobs:
         with:
           ssh_private_key: ${{ secrets.GITEE_PRIVATE_KEY }}
           source_repo: "git@github.com:chunhuigao/study_ai.git"
-          destination_repo: "git@gitee.com:你的Gitee用户名/仓库名.git"
+          destination_repo: "git@gitee.com:beidouluofanchen/study_ai.git"
