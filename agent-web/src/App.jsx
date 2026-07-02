@@ -71,6 +71,7 @@ function App() {
   const [trace, setTrace] = useState([]);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
+  const [totalUsage, setTotalUsage] = useState(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -106,6 +107,7 @@ function App() {
       });
 
       setTrace(result.trace ?? []);
+      setTotalUsage(result.totalUsage ?? null);
 
       if (!result.ok) {
         throw new Error(result.error || 'Agent 调用失败');
@@ -136,6 +138,7 @@ function App() {
   function resetChat() {
     setMessages(initialMessages);
     setTrace([]);
+    setTotalUsage(null);
     setError('');
     setInput('');
   }
@@ -145,8 +148,14 @@ function App() {
       <section className="chat-area">
         <header className="topbar">
           <div>
-            <h1>Electron Agent</h1>
-            <p>React 前端 + Electron 主进程 + Python ReAct Agent</p>
+            {totalUsage ? (
+              <p className="token-usage">
+                Token 用量 — 输入: {totalUsage.prompt_tokens} | 输出:{' '}
+                {totalUsage.completion_tokens} | 合计: {totalUsage.total_tokens}
+              </p>
+            ) : (
+              <p className="token-usage">Token 用量：发送问题后显示</p>
+            )}
           </div>
           <button
             type="button"

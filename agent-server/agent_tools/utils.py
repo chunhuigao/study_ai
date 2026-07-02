@@ -69,3 +69,16 @@ def fetch_json(url):
     with urlopen(url, timeout=12, context=_SSL_CONTEXT) as response:
         charset = response.headers.get_content_charset() or "utf-8"
         return json.loads(response.read().decode(charset))
+
+
+def fetch_html(url, headers=None):
+    from urllib.request import Request
+
+    req = Request(url)
+    req.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+    if headers:
+        for key, value in headers.items():
+            req.add_header(key, value)
+    with urlopen(req, timeout=15, context=_SSL_CONTEXT) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        return response.read().decode(charset, errors="replace")

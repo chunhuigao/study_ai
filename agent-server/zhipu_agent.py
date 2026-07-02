@@ -206,12 +206,18 @@ def run_agent_with_history(raw_messages, max_steps=10):
     ]
     tools = get_tools()
     trace = []
+    total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
     for step in range(max_steps):
         logger.info("[agent_loop] ===== Step %d/%d =====", step + 1, max_steps)
         full_content, usage = call_model(messages)
         parsed = parse_response(full_content)
         logger.info("[agent_loop] 解析结果 type=%s", parsed.get("type"))
+
+        if usage and isinstance(usage, dict):
+            total_usage["prompt_tokens"] += usage.get("prompt_tokens", 0)
+            total_usage["completion_tokens"] += usage.get("completion_tokens", 0)
+            total_usage["total_tokens"] += usage.get("total_tokens", 0)
 
         trace_item = {
             "step": step + 1,
@@ -228,6 +234,7 @@ def run_agent_with_history(raw_messages, max_steps=10):
                 "ok": True,
                 "answer": parsed["content"],
                 "trace": trace,
+                "totalUsage": total_usage,
             }
 
         if parsed["type"] == "action":
@@ -275,4 +282,5 @@ def run_agent_with_history(raw_messages, max_steps=10):
         "error": f"已达到最大步骤数 ({max_steps})，未能得出最终答案。",
         "answer": "",
         "trace": trace,
+        "totalUsage": total_usage,
     }
