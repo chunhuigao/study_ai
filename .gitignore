@@ -5,4 +5,5 @@ dist
 __pycache__
 zhipu.py
 agent-server/config/model_config.json
-agent-server/var/logs/
+agent-server/var/
+
