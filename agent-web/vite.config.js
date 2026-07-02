@@ -11,10 +11,17 @@ export default defineConfig({
   server: {
     host: '127.0.0.1',
     port: 5173,
-    strictPort: true
+    strictPort: true,
   },
   build: {
     outDir: resolve(__dirname, '..', 'dist'),
-    emptyOutDir: true
-  }
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          antd: ['antd', '@ant-design/icons'],
+        },
+      },
+    },
+  },
 });

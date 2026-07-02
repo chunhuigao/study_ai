@@ -12,14 +12,15 @@
     "electron": "electron ."
   },
   "dependencies": {
+    "@ant-design/icons": "^6.3.2",
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.0.5",
-    "typescript": "^5.7.2",
+    "antd": "^6.5.0",
+    "concurrently": "^9.1.0",
+    "electron": "^33.2.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "electron": "^33.2.1",
-    "concurrently": "^9.1.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
     "wait-on": "^8.0.1"
-  },
-  "devDependencies": {}
+  }
 }
