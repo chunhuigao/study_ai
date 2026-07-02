@@ -1,19 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 
 const initialMessages = [
   {
     role: 'assistant',
-    content: '你好，我是一个最简 Electron Agent。可以连续对话，也可以按需要调用计算器和当前时间工具。'
-  }
+    content:
+      '你好，我是一个最简 Electron Agent。可以连续对话，也可以按需要调用计算器和当前时间工具。',
+  },
 ];
 
 function MessageBubble({ message }) {
   const isUser = message.role === 'user';
 
   return (
-    <article className={`message ${isUser ? 'message-user' : 'message-assistant'}`}>
+    <article
+      className={`message ${isUser ? 'message-user' : 'message-assistant'}`}
+    >
       <div className="message-role">{isUser ? '你' : 'Agent'}</div>
       <div className="message-content">{message.content}</div>
     </article>
@@ -25,7 +28,9 @@ function TracePanel({ trace }) {
     return (
       <aside className="trace-panel">
         <div className="panel-title">执行轨迹</div>
-        <p className="empty-text">发送问题后，这里会显示模型的 Thought、Action 和 Observation。</p>
+        <p className="empty-text">
+          发送问题后，这里会显示模型的 Thought、Action 和 Observation。
+        </p>
       </aside>
     );
   }
@@ -35,7 +40,11 @@ function TracePanel({ trace }) {
       <div className="panel-title">执行轨迹</div>
       <div className="trace-list">
         {trace.map((item) => (
-          <details className="trace-item" key={item.step} open={item.step === trace.length}>
+          <details
+            className="trace-item"
+            key={item.step}
+            open={item.step === trace.length}
+          >
             <summary>
               <span>Step {item.step}</span>
               <strong>{item.type}</strong>
@@ -45,7 +54,9 @@ function TracePanel({ trace }) {
                 {item.tool}({item.toolInput || '空'})
               </div>
             ) : null}
-            {item.observation ? <div className="observation">{item.observation}</div> : null}
+            {item.observation ? (
+              <div className="observation">{item.observation}</div>
+            ) : null}
             <pre>{item.modelOutput}</pre>
           </details>
         ))}
@@ -60,10 +71,18 @@ function App() {
   const [trace, setTrace] = useState([]);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isSending]);
 
   const chatMessages = useMemo(
-    () => messages.filter((message) => message.role === 'user' || message.role === 'assistant'),
-    [messages]
+    () =>
+      messages.filter(
+        (message) => message.role === 'user' || message.role === 'assistant',
+      ),
+    [messages],
   );
 
   async function sendMessage(event) {
@@ -83,7 +102,7 @@ function App() {
     try {
       const result = await window.agentApi.chat({
         messages: nextMessages,
-        maxSteps: 10
+        maxSteps: 10,
       });
 
       setTrace(result.trace ?? []);
@@ -96,8 +115,8 @@ function App() {
         ...current,
         {
           role: 'assistant',
-          content: result.answer || '没有获得有效回答。'
-        }
+          content: result.answer || '没有获得有效回答。',
+        },
       ]);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -106,8 +125,8 @@ function App() {
         ...current,
         {
           role: 'assistant',
-          content: `调用失败：${message}`
-        }
+          content: `调用失败：${message}`,
+        },
       ]);
     } finally {
       setIsSending(false);
@@ -129,7 +148,11 @@ function App() {
             <h1>Electron Agent</h1>
             <p>React 前端 + Electron 主进程 + Python ReAct Agent</p>
           </div>
-          <button type="button" className="secondary-button" onClick={resetChat}>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={resetChat}
+          >
             清空
           </button>
         </header>
@@ -144,6 +167,7 @@ function App() {
               <div className="message-content muted">正在思考...</div>
             </article>
           ) : null}
+          <div ref={messagesEndRef} />
         </div>
 
         {error ? <div className="error-banner">{error}</div> : null}
