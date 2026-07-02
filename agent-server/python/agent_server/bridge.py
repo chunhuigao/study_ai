@@ -12,7 +12,7 @@ from .model_config import get_available_models, load_config, switch_model
 
 SERVER_DIR = Path(__file__).resolve().parents[2]
 LOG_DIR = SERVER_DIR / "var" / "logs"
-TOKEN_USAGE_FILE = SERVER_DIR / "var" / "token_usage.json"
+TOKEN_USAGE_FILE = SERVER_DIR / "var" / "tokens_usage.json"
 
 
 class HourlyFileHandler(logging.FileHandler):
