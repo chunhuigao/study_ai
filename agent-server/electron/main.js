@@ -23,8 +23,8 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
-      nodeIntegration: false
-    }
+      nodeIntegration: false,
+    },
   });
 
   if (isDev) {
@@ -37,10 +37,14 @@ function createWindow() {
 function callAgent(payload) {
   return new Promise((resolve, reject) => {
     const pythonCommand = process.env.PYTHON ?? 'python3';
-    const child = spawn(pythonCommand, [path.join(serverDir, 'agent_bridge.py')], {
-      cwd: serverDir,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
+    const child = spawn(
+      pythonCommand,
+      [path.join(serverDir, 'agent_bridge.py')],
+      {
+        cwd: serverDir,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
+    );
 
     let stdout = '';
     let stderr = '';
@@ -59,7 +63,9 @@ function callAgent(payload) {
 
     child.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(stderr.trim() || `Agent 进程异常退出，退出码 ${code}`));
+        reject(
+          new Error(stderr.trim() || `Agent 进程异常退出，退出码 ${code}`),
+        );
         return;
       }
 
@@ -75,6 +81,50 @@ function callAgent(payload) {
   });
 }
 
+function getTokenUsage() {
+  return new Promise((resolve, reject) => {
+    const pythonCommand = process.env.PYTHON ?? 'python3';
+    const child = spawn(
+      pythonCommand,
+      [path.join(serverDir, 'agent_bridge.py'), '--get-token-usage'],
+      {
+        cwd: serverDir,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
+    );
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on('error', (error) => {
+      reject(new Error(`无法启动 Python: ${error.message}`));
+    });
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        reject(
+          new Error(stderr.trim() || `获取 Token 用量失败，退出码 ${code}`),
+        );
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(stdout));
+      } catch (error) {
+        reject(new Error(`解析 Token 用量失败: ${error.message}`));
+      }
+    });
+  });
+}
+
 ipcMain.handle('agent:chat', async (_event, payload) => {
   if (!payload || typeof payload !== 'object') {
     throw new Error('请求参数无效');
@@ -84,6 +134,10 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
   const maxSteps = Number.isInteger(payload.maxSteps) ? payload.maxSteps : 10;
 
   return callAgent({ messages, maxSteps });
+});
+
+ipcMain.handle('agent:getTokenUsage', async () => {
+  return getTokenUsage();
 });
 
 app.whenReady().then(() => {

@@ -11,6 +11,7 @@ from .zhipu_agent import run_agent_with_history
 
 SERVER_DIR = Path(__file__).resolve().parents[2]
 LOG_DIR = SERVER_DIR / "var" / "logs"
+TOKEN_USAGE_FILE = SERVER_DIR / "var" / "token_usage.json"
 
 
 class HourlyFileHandler(logging.FileHandler):
@@ -61,7 +62,39 @@ _setup_logging()
 logger = logging.getLogger("agent")
 
 
+def load_token_usage():
+    if TOKEN_USAGE_FILE.exists():
+        try:
+            return json.loads(TOKEN_USAGE_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+    return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "request_count": 0}
+
+
+def save_token_usage(usage_data):
+    TOKEN_USAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    TOKEN_USAGE_FILE.write_text(
+        json.dumps(usage_data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def accumulate_token_usage(session_usage):
+    cumulative = load_token_usage()
+    cumulative["prompt_tokens"] += session_usage.get("prompt_tokens", 0)
+    cumulative["completion_tokens"] += session_usage.get("completion_tokens", 0)
+    cumulative["total_tokens"] += session_usage.get("total_tokens", 0)
+    cumulative["request_count"] = cumulative.get("request_count", 0) + 1
+    cumulative["last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    save_token_usage(cumulative)
+    return cumulative
+
+
 def main():
+    if "--get-token-usage" in sys.argv:
+        cumulative = load_token_usage()
+        print(json.dumps(cumulative, ensure_ascii=False))
+        return
+
     try:
         raw_input = sys.stdin.read() or "{}"
         logger.info("========== 收到前端请求 ==========")
@@ -84,6 +117,18 @@ def main():
 
         with contextlib.redirect_stdout(io.StringIO()):
             result = run_agent_with_history(raw_messages, max_steps=max_steps)
+
+        session_usage = result.get("totalUsage")
+        if session_usage:
+            cumulative = accumulate_token_usage(session_usage)
+            result["cumulativeUsage"] = cumulative
+            logger.info(
+                "累计Token用量: prompt=%d, completion=%d, total=%d, 请求次数=%d",
+                cumulative["prompt_tokens"],
+                cumulative["completion_tokens"],
+                cumulative["total_tokens"],
+                cumulative["request_count"],
+            )
 
         logger.info("========== 返回前端结果 ==========")
         logger.info(

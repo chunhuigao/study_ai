@@ -76,11 +76,22 @@ button:disabled {
   font-weight: 700;
 }
 
+.token-usage-group {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
 .token-usage {
-  margin: 4px 0 0;
   color: #71685d;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+}
+
+.token-usage-cumulative {
+  color: #214e40;
+  font-weight: 600;
 }
 
 .secondary-button {

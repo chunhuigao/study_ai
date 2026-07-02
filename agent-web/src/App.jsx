@@ -72,11 +72,25 @@ function App() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
   const [totalUsage, setTotalUsage] = useState(null);
+  const [cumulativeUsage, setCumulativeUsage] = useState(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isSending]);
+
+  useEffect(() => {
+    if (window.agentApi?.getTokenUsage) {
+      window.agentApi
+        .getTokenUsage()
+        .then((data) => {
+          if (data && data.total_tokens > 0) {
+            setCumulativeUsage(data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   const chatMessages = useMemo(
     () =>
@@ -108,6 +122,10 @@ function App() {
 
       setTrace(result.trace ?? []);
       setTotalUsage(result.totalUsage ?? null);
+
+      if (result.cumulativeUsage) {
+        setCumulativeUsage(result.cumulativeUsage);
+      }
 
       if (!result.ok) {
         throw new Error(result.error || 'Agent 调用失败');
@@ -148,14 +166,26 @@ function App() {
       <section className="chat-area">
         <header className="topbar">
           <div>
-            {totalUsage ? (
-              <p className="token-usage">
-                Token 用量 — 输入: {totalUsage.prompt_tokens} | 输出:{' '}
-                {totalUsage.completion_tokens} | 合计: {totalUsage.total_tokens}
-              </p>
-            ) : (
-              <p className="token-usage">Token 用量：发送问题后显示</p>
-            )}
+            <h1>React 前端 + Electron 主进程 + Python ReAct Agent</h1>
+            <div className="token-usage-group">
+              {totalUsage ? (
+                <span className="token-usage">
+                  本次 — 输入: {totalUsage.prompt_tokens} | 输出:{' '}
+                  {totalUsage.completion_tokens} | 合计:{' '}
+                  {totalUsage.total_tokens}
+                </span>
+              ) : null}
+              {cumulativeUsage ? (
+                <span className="token-usage token-usage-cumulative">
+                  累计 — 输入: {cumulativeUsage.prompt_tokens} | 输出:{' '}
+                  {cumulativeUsage.completion_tokens} | 合计:{' '}
+                  {cumulativeUsage.total_tokens} | 请求:{' '}
+                  {cumulativeUsage.request_count}次
+                </span>
+              ) : (
+                <span className="token-usage">Token 用量：发送问题后显示</span>
+              )}
+            </div>
           </div>
           <button
             type="button"
