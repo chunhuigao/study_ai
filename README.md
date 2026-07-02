@@ -12,17 +12,29 @@ agent-web/
 
 agent-server/
   agent_bridge.py
-  agent_tools.py
-  zhipu_agent.py
+  config/
   electron/
+  python/
+    agent_server/
+      bridge.py
+      model_config.py
+      zhipu_agent.py
+      tools/
+  var/
 
+package.json
 zhipu.py
 ```
 
 - `agent-web`：React + Vite 前端。
-- `agent-server`：Electron 主进程、preload 和 Python bridge。
-- `agent-server/agent_tools.py`：Agent 扩展工具，包含当前时间、城市地理位置、天气查询。
-- `agent-server/zhipu_agent.py`：唯一直接依赖 `zhipu.py` 的模块，负责复用模型调用、工具和解析逻辑。
+- `agent-server/electron`：Electron 主进程和 preload。
+- `agent-server/agent_bridge.py`：Electron 调用 Python 的稳定入口。
+- `agent-server/python/agent_server/bridge.py`：JSON stdin/stdout 协议层。
+- `agent-server/python/agent_server/zhipu_agent.py`：Agent 主循环、模型调用和工具调度。
+- `agent-server/python/agent_server/tools`：Agent 扩展工具，包含当前时间、城市地理位置、天气和联网搜索。
+- `agent-server/config`：模型配置目录，复制 `model_config.example.json` 为 `model_config.json` 后填写本地配置。
+- `agent-server/var/logs`：运行日志目录，不提交到版本库。
+- `dist`：前端构建产物目录，由构建命令生成，不提交到版本库。
 - `zhipu.py`：保留在项目根目录，不在本项目分层调整中修改。
 
 ## 运行
@@ -41,7 +53,8 @@ pnpm start
 
 运行前提：
 
-- Python 侧需要可以导入 `zai`，并且 `zhipu.py` 中的模型调用配置可用。
+- Python 侧需要可以导入 `zai`。
+- 需要配置 `agent-server/config/model_config.json`，可从 `agent-server/config/model_config.example.json` 复制。
 - 天气和城市地理位置工具使用 Open-Meteo 公开接口，运行时需要网络访问。
 - Electron 首次安装会下载桌面运行时，安装过程不能设置 `ELECTRON_SKIP_BINARY_DOWNLOAD=1`。
 - 如果当前环境没有全局 `npm`，请使用本机 Node.js 自带的 npm 或 pnpm。

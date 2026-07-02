@@ -2,21 +2,22 @@ import logging
 import sys
 from pathlib import Path
 
-from agent_tools import TOOL_DESC as EXTRA_TOOL_DESC
-from agent_tools import TOOLS as EXTRA_TOOLS
-from model_config import config
-from zai import ZhipuAiClient
+from .model_config import config
+from .tools import TOOL_DESC as EXTRA_TOOL_DESC
+from .tools import TOOLS as EXTRA_TOOLS
 
 logger = logging.getLogger("agent")
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
+ROOT_DIR = Path(__file__).resolve().parents[3]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 try:
+    from zai import ZhipuAiClient
+
     _api_key = config["api_key"]
     if not _api_key:
-        raise ValueError("model_config.json 中 api_key 为空，请先配置")
+        raise ValueError("agent-server/config/model_config.json 中 api_key 为空，请先配置")
     client = ZhipuAiClient(
         api_key=_api_key,
         base_url=config.get("base_url"),

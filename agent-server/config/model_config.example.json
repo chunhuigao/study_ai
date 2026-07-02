@@ -1,0 +1,7 @@
+{
+  "model": "glm-5.2",
+  "api_key": "",
+  "base_url": null,
+  "max_tokens": 65536,
+  "temperature": 0.7
+}
