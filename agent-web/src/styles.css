@@ -72,24 +72,21 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  contain: content;
 }
 
 .chat-bubble {
   display: flex;
   gap: 10px;
   max-width: 80%;
-  animation: fadeInUp 0.3s ease;
+  contain: layout style;
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.messages-overflow-hint {
+  text-align: center;
+  padding: 8px 0 4px;
+  border-bottom: 1px dashed #e8e8e8;
+  margin-bottom: 4px;
 }
 
 .chat-bubble-user {

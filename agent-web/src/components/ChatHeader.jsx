@@ -1,0 +1,112 @@
+import React, { useMemo } from 'react';
+import {
+  Layout,
+  Typography,
+  Button,
+  Select,
+  Space,
+  Badge,
+  Tooltip,
+} from 'antd';
+import {
+  DeleteOutlined,
+  ThunderboltOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons';
+
+const { Header } = Layout;
+const { Title, Text } = Typography;
+
+const ChatHeader = React.memo(function ChatHeader({
+  currentModel,
+  availableModels,
+  isSending,
+  totalUsage,
+  cumulativeUsage,
+  onSwitchModel,
+  onReset,
+}) {
+  const modelOptions = useMemo(
+    () =>
+      availableModels.map((m) => ({
+        value: m.id,
+        label: (
+          <Space size={4}>
+            <span>{m.name}</span>
+            <Tooltip title={m.description}>
+              <InfoCircleOutlined style={{ color: '#bfbfbf', fontSize: 11 }} />
+            </Tooltip>
+          </Space>
+        ),
+      })),
+    [availableModels],
+  );
+
+  return (
+    <Header className="app-header">
+      <div className="header-left">
+        <div className="header-title-row">
+          <ThunderboltOutlined
+            style={{ fontSize: 20, color: '#1f5f6b', marginRight: 8 }}
+          />
+          <Title level={4} style={{ margin: 0 }}>
+            Electron Agent
+          </Title>
+        </div>
+        <div className="header-meta">
+          {availableModels.length > 0 ? (
+            <Space size={4} align="center">
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                模型
+              </Text>
+              <Select
+                size="small"
+                value={currentModel}
+                onChange={onSwitchModel}
+                disabled={isSending}
+                options={modelOptions}
+                style={{ width: 150 }}
+                popupMatchSelectWidth={false}
+              />
+            </Space>
+          ) : null}
+          {totalUsage ? (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              本次 {totalUsage.total_tokens} tokens
+            </Text>
+          ) : null}
+          {cumulativeUsage ? (
+            <Tooltip
+              title={`输入: ${cumulativeUsage.prompt_tokens} | 输出: ${cumulativeUsage.completion_tokens} | 合计: ${cumulativeUsage.total_tokens} | 请求: ${cumulativeUsage.request_count}次`}
+            >
+              <Badge
+                count={cumulativeUsage.request_count}
+                size="small"
+                color="#1f5f6b"
+              >
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  累计 {cumulativeUsage.total_tokens} tokens
+                </Text>
+              </Badge>
+            </Tooltip>
+          ) : !totalUsage ? (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Token 用量：发送后显示
+            </Text>
+          ) : null}
+        </div>
+      </div>
+      <Button
+        icon={<DeleteOutlined />}
+        onClick={onReset}
+        danger
+        ghost
+        size="small"
+      >
+        清空
+      </Button>
+    </Header>
+  );
+});
+
+export default ChatHeader;

@@ -1,136 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import {
-  ConfigProvider,
-  Layout,
-  Typography,
-  Input,
-  Button,
-  Select,
-  Tag,
-  Collapse,
-  Space,
-  Divider,
-  Alert,
-  Badge,
-  Tooltip,
-  theme,
-} from 'antd';
-import {
-  SendOutlined,
-  DeleteOutlined,
-  RobotOutlined,
-  UserOutlined,
-  ThunderboltOutlined,
-  LoadingOutlined,
-  InfoCircleOutlined,
-} from '@ant-design/icons';
+import { ConfigProvider, Layout, Alert, Typography, theme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import './styles.css';
 
-const { Header, Content, Sider } = Layout;
-const { Title, Text, Paragraph } = Typography;
-const { TextArea } = Input;
+import ChatHeader from './components/ChatHeader';
+import MessageList from './components/MessageList';
+import Composer from './components/Composer';
+import TracePanel from './components/TracePanel';
+
+const { Content, Sider } = Layout;
+const { Text } = Typography;
+
+let nextMsgId = 1;
+function createMessage(role, content) {
+  return { id: nextMsgId++, role, content };
+}
 
 const initialMessages = [
-  {
-    role: 'assistant',
-    content:
-      '你好，我是一个最简 Electron Agent。可以连续对话，也可以按需要调用计算器和当前时间工具。',
-  },
+  createMessage(
+    'assistant',
+    '你好，我是一个最简 Electron Agent。可以连续对话，也可以按需要调用计算器和当前时间工具。',
+  ),
 ];
-
-function MessageBubble({ message }) {
-  const isUser = message.role === 'user';
-
-  return (
-    <div
-      className={`chat-bubble ${isUser ? 'chat-bubble-user' : 'chat-bubble-assistant'}`}
-    >
-      <div className="chat-bubble-avatar">
-        {isUser ? (
-          <div className="avatar avatar-user">
-            <UserOutlined />
-          </div>
-        ) : (
-          <div className="avatar avatar-assistant">
-            <RobotOutlined />
-          </div>
-        )}
-      </div>
-      <div className="chat-bubble-body">
-        <div className="chat-bubble-name">{isUser ? '你' : 'Agent'}</div>
-        <div className="chat-bubble-content">{message.content}</div>
-      </div>
-    </div>
-  );
-}
-
-function TracePanel({ trace }) {
-  if (!trace.length) {
-    return (
-      <div className="trace-empty">
-        <InfoCircleOutlined
-          style={{ fontSize: 32, color: '#bfbfbf', marginBottom: 12 }}
-        />
-        <Text type="secondary">
-          发送问题后，这里会显示模型的 Thought、Action 和 Observation。
-        </Text>
-      </div>
-    );
-  }
-
-  const items = trace.map((item) => ({
-    key: String(item.step),
-    label: (
-      <Space>
-        <Text strong>Step {item.step}</Text>
-        <Tag
-          color={
-            item.type === 'final'
-              ? 'green'
-              : item.type === 'action'
-                ? 'blue'
-                : 'orange'
-          }
-        >
-          {item.type}
-        </Tag>
-        {item.tool ? (
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {item.tool}({item.toolInput || '空'})
-          </Text>
-        ) : null}
-      </Space>
-    ),
-    children: (
-      <div className="trace-detail">
-        {item.observation ? (
-          <div className="trace-observation">
-            <Text type="secondary" strong style={{ fontSize: 12 }}>
-              Observation:
-            </Text>
-            <Paragraph
-              style={{ margin: '4px 0 0', fontSize: 12, color: '#595959' }}
-            >
-              {item.observation}
-            </Paragraph>
-          </div>
-        ) : null}
-        <pre className="trace-pre">{item.modelOutput}</pre>
-      </div>
-    ),
-  }));
-
-  return (
-    <Collapse
-      items={items}
-      defaultActiveKey={[String(trace.length)]}
-      size="small"
-      className="trace-collapse"
-    />
-  );
-}
 
 function App() {
   const [messages, setMessages] = useState(initialMessages);
@@ -142,11 +34,21 @@ function App() {
   const [cumulativeUsage, setCumulativeUsage] = useState(null);
   const [currentModel, setCurrentModel] = useState('');
   const [availableModels, setAvailableModels] = useState([]);
-  const messagesEndRef = useRef(null);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isSending]);
+  const inputRef = useRef('');
+  const sendingRef = useRef(false);
+  const messagesRef = useRef(initialMessages);
+
+  inputRef.current = input;
+  sendingRef.current = isSending;
+
+  const updateMessages = useCallback((updater) => {
+    setMessages((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      messagesRef.current = next;
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (window.agentApi?.getTokenUsage) {
@@ -173,17 +75,9 @@ function App() {
     }
   }, []);
 
-  const chatMessages = useMemo(
-    () =>
-      messages.filter(
-        (message) => message.role === 'user' || message.role === 'assistant',
-      ),
-    [messages],
-  );
-
-  async function sendMessage() {
-    const text = input.trim();
-    if (!text || isSending) {
+  const sendMessage = useCallback(async () => {
+    const text = inputRef.current.trim();
+    if (!text || sendingRef.current) {
       return;
     }
 
@@ -191,12 +85,17 @@ function App() {
     setInput('');
     setIsSending(true);
 
-    const nextMessages = [...chatMessages, { role: 'user', content: text }];
-    setMessages(nextMessages);
+    const userMsg = createMessage('user', text);
+    updateMessages((prev) => [...prev, userMsg]);
 
     try {
+      const chatHistory = messagesRef.current
+        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .map(({ role, content }) => ({ role, content }));
+      chatHistory.push({ role: 'user', content: text });
+
       const result = await window.agentApi.chat({
-        messages: nextMessages,
+        messages: chatHistory,
         maxSteps: 10,
       });
 
@@ -211,64 +110,50 @@ function App() {
         throw new Error(result.error || 'Agent 调用失败');
       }
 
-      setMessages((current) => [
-        ...current,
-        {
-          role: 'assistant',
-          content: result.answer || '没有获得有效回答。',
-        },
+      updateMessages((prev) => [
+        ...prev,
+        createMessage('assistant', result.answer || '没有获得有效回答。'),
       ]);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
-      setMessages((current) => [
-        ...current,
-        {
-          role: 'assistant',
-          content: `调用失败：${message}`,
-        },
+      updateMessages((prev) => [
+        ...prev,
+        createMessage('assistant', `调用失败：${message}`),
       ]);
     } finally {
       setIsSending(false);
     }
-  }
+  }, [updateMessages]);
 
-  function resetChat() {
+  const resetChat = useCallback(() => {
     setMessages(initialMessages);
+    messagesRef.current = initialMessages;
     setTrace([]);
     setTotalUsage(null);
     setError('');
     setInput('');
-  }
+  }, []);
 
-  async function handleSwitchModel(modelId) {
-    if (!modelId || modelId === currentModel) {
-      return;
-    }
-
-    try {
-      const result = await window.agentApi.switchModel(modelId);
-      if (result.ok) {
-        setCurrentModel(modelId);
-      } else {
-        setError(result.message || '切换模型失败');
+  const handleSwitchModel = useCallback(
+    async (modelId) => {
+      if (!modelId || modelId === currentModel) {
+        return;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '切换模型失败');
-    }
-  }
 
-  const modelOptions = availableModels.map((m) => ({
-    value: m.id,
-    label: (
-      <Space size={4}>
-        <span>{m.name}</span>
-        <Tooltip title={m.description}>
-          <InfoCircleOutlined style={{ color: '#bfbfbf', fontSize: 11 }} />
-        </Tooltip>
-      </Space>
-    ),
-  }));
+      try {
+        const result = await window.agentApi.switchModel(modelId);
+        if (result.ok) {
+          setCurrentModel(modelId);
+        } else {
+          setError(result.message || '切换模型失败');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '切换模型失败');
+      }
+    },
+    [currentModel],
+  );
 
   return (
     <ConfigProvider
@@ -285,96 +170,18 @@ function App() {
     >
       <Layout className="app-shell">
         <Layout className="chat-layout">
-          <Header className="app-header">
-            <div className="header-left">
-              <div className="header-title-row">
-                <ThunderboltOutlined
-                  style={{ fontSize: 20, color: '#1f5f6b', marginRight: 8 }}
-                />
-                <Title level={4} style={{ margin: 0 }}>
-                  Electron Agent
-                </Title>
-              </div>
-              <div className="header-meta">
-                {availableModels.length > 0 ? (
-                  <Space size={4} align="center">
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      模型
-                    </Text>
-                    <Select
-                      size="small"
-                      value={currentModel}
-                      onChange={handleSwitchModel}
-                      disabled={isSending}
-                      options={modelOptions}
-                      style={{ width: 150 }}
-                      popupMatchSelectWidth={false}
-                    />
-                  </Space>
-                ) : null}
-                {totalUsage ? (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    本次 {totalUsage.total_tokens} tokens
-                  </Text>
-                ) : null}
-                {cumulativeUsage ? (
-                  <Tooltip
-                    title={`输入: ${cumulativeUsage.prompt_tokens} | 输出: ${cumulativeUsage.completion_tokens} | 合计: ${cumulativeUsage.total_tokens} | 请求: ${cumulativeUsage.request_count}次`}
-                  >
-                    <Badge
-                      count={cumulativeUsage.request_count}
-                      size="small"
-                      color="#1f5f6b"
-                    >
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        累计 {cumulativeUsage.total_tokens} tokens
-                      </Text>
-                    </Badge>
-                  </Tooltip>
-                ) : !totalUsage ? (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Token 用量：发送后显示
-                  </Text>
-                ) : null}
-              </div>
-            </div>
-            <Button
-              icon={<DeleteOutlined />}
-              onClick={resetChat}
-              danger
-              ghost
-              size="small"
-            >
-              清空
-            </Button>
-          </Header>
+          <ChatHeader
+            currentModel={currentModel}
+            availableModels={availableModels}
+            isSending={isSending}
+            totalUsage={totalUsage}
+            cumulativeUsage={cumulativeUsage}
+            onSwitchModel={handleSwitchModel}
+            onReset={resetChat}
+          />
 
           <Content className="chat-content">
-            <div className="messages-list">
-              {messages.map((message, index) => (
-                <MessageBubble
-                  message={message}
-                  key={`${message.role}-${index}`}
-                />
-              ))}
-              {isSending ? (
-                <div className="chat-bubble chat-bubble-assistant">
-                  <div className="chat-bubble-avatar">
-                    <div className="avatar avatar-assistant">
-                      <RobotOutlined />
-                    </div>
-                  </div>
-                  <div className="chat-bubble-body">
-                    <div className="chat-bubble-name">Agent</div>
-                    <div className="chat-bubble-content chat-thinking">
-                      <LoadingOutlined style={{ marginRight: 6 }} />
-                      正在思考...
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-              <div ref={messagesEndRef} />
-            </div>
+            <MessageList messages={messages} isSending={isSending} />
 
             {error ? (
               <Alert
@@ -387,31 +194,12 @@ function App() {
               />
             ) : null}
 
-            <div className="composer-area">
-              <TextArea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                placeholder="输入问题，例如：现在几点？或者 23 * (17 + 5) 等于多少？"
-                autoSize={{ minRows: 2, maxRows: 5 }}
-                disabled={isSending}
-              />
-              <Button
-                type="primary"
-                icon={<SendOutlined />}
-                onClick={sendMessage}
-                loading={isSending}
-                disabled={!input.trim() || isSending}
-                size="large"
-              >
-                发送
-              </Button>
-            </div>
+            <Composer
+              input={input}
+              isSending={isSending}
+              onInputChange={setInput}
+              onSend={sendMessage}
+            />
           </Content>
         </Layout>
 
