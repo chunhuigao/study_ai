@@ -1,8 +1,11 @@
+import logging
 import sys
 from pathlib import Path
 
 from agent_tools import TOOL_DESC as EXTRA_TOOL_DESC
 from agent_tools import TOOLS as EXTRA_TOOLS
+
+logger = logging.getLogger("agent")
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
@@ -44,6 +47,11 @@ def normalize_messages(raw_messages):
 
         messages.append({"role": role, "content": content.strip()})
 
+    logger.info(
+        "[normalize_messages] 输入 %d 条 -> 输出 %d 条有效消息",
+        len(raw_messages),
+        len(messages),
+    )
     return messages
 
 
@@ -55,14 +63,33 @@ def build_prompt(messages):
 
     latest = messages[-1]["content"] if messages else ""
     if history_lines:
-        return "以下是此前的多轮对话，请结合上下文回答最后一个问题。\n\n" + "\n".join(
-            history_lines
-        ) + f"\n\n最后一个问题: {latest}"
+        prompt = (
+            "以下是此前的多轮对话，请结合上下文回答最后一个问题。\n\n"
+            + "\n".join(history_lines)
+            + f"\n\n最后一个问题: {latest}"
+        )
+    else:
+        prompt = latest
 
-    return latest
+    logger.info(
+        "[build_prompt] 构建提示词, 历史轮数=%d, 最新问题=%s",
+        len(history_lines),
+        latest[:200],
+    )
+    logger.debug("[build_prompt] 完整提示词: %s", prompt[:1000])
+    return prompt
 
 
 def call_model(messages):
+    logger.info("[call_model] 调用模型, 消息条数=%d", len(messages))
+    for idx, msg in enumerate(messages):
+        logger.debug(
+            "[call_model] messages[%d] role=%s content=%s",
+            idx,
+            msg["role"],
+            msg["content"][:300],
+        )
+
     response = zhipu.client.chat.completions.create(
         model="glm-5.2",
         messages=messages,
@@ -78,6 +105,10 @@ def call_model(messages):
         elif key == "usage":
             usage = value
 
+    logger.info(
+        "[call_model] 模型返回, content长度=%d, usage=%s", len(content), usage
+    )
+    logger.debug("[call_model] 模型输出: %s", content[:1000])
     return content, usage
 
 
@@ -107,8 +138,10 @@ def run_agent_with_history(raw_messages, max_steps=10):
     trace = []
 
     for step in range(max_steps):
+        logger.info("[agent_loop] ===== Step %d/%d =====", step + 1, max_steps)
         full_content, usage = call_model(messages)
         parsed = zhipu.parse_response(full_content)
+        logger.info("[agent_loop] 解析结果 type=%s", parsed.get("type"))
 
         trace_item = {
             "step": step + 1,
@@ -120,6 +153,7 @@ def run_agent_with_history(raw_messages, max_steps=10):
         if parsed["type"] == "final":
             trace_item["finalAnswer"] = parsed["content"]
             trace.append(trace_item)
+            logger.info("[agent_loop] 最终答案: %s", parsed["content"][:500])
             return {
                 "ok": True,
                 "answer": parsed["content"],
@@ -131,16 +165,24 @@ def run_agent_with_history(raw_messages, max_steps=10):
             tool_input = parsed["input"]
             trace_item["tool"] = tool_name
             trace_item["toolInput"] = tool_input
+            logger.info(
+                "[agent_loop] 调用工具: %s, 输入: %s", tool_name, tool_input[:200]
+            )
 
             if tool_name in tools:
                 try:
                     observation = tools[tool_name](tool_input)
+                    logger.info(
+                        "[agent_loop] 工具返回: %s", str(observation)[:500]
+                    )
                 except Exception as error:
                     observation = f"工具执行出错: {error}"
+                    logger.error("[agent_loop] 工具执行出错: %s", error)
             else:
                 observation = (
                     f"未知工具: {tool_name}，可用工具: {', '.join(tools.keys())}"
                 )
+                logger.warning("[agent_loop] 未知工具: %s", tool_name)
 
             trace_item["observation"] = observation
             trace.append(trace_item)
@@ -148,6 +190,7 @@ def run_agent_with_history(raw_messages, max_steps=10):
             messages.append({"role": "user", "content": f"Observation: {observation}"})
             continue
 
+        logger.info("[agent_loop] 仅Thought无Action, 提示继续")
         trace.append(trace_item)
         messages.append({"role": "assistant", "content": full_content})
         messages.append(
