@@ -99,6 +99,7 @@ const Composer = React.memo(function Composer({
               ref={fileInputRef}
               type="file"
               multiple
+              accept=".txt,.md,.json,.csv,.py,.js,.jsx,.ts,.tsx,.html,.css,.xml,.yaml,.yml,.toml,.ini,.cfg,.log,.sql,.sh,.bat,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.bmp,.webp,.svg,.zip,.tar,.gz"
               style={{ display: 'none' }}
               onChange={handleFileChange}
             />
