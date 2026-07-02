@@ -4,3 +4,5 @@ dist
 .pnpm-store
 __pycache__
 zhipu.py
+agent-server/logs/
+agent-server/model_config.json

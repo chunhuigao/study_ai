@@ -1,9 +1,12 @@
 import logging
+import os
 import sys
 from pathlib import Path
 
 from agent_tools import TOOL_DESC as EXTRA_TOOL_DESC
 from agent_tools import TOOLS as EXTRA_TOOLS
+from model_config import config
+from zai import ZhipuAiClient
 
 logger = logging.getLogger("agent")
 
@@ -12,23 +15,82 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 try:
-    import zhipu
+    _api_key = config["api_key"]
+    if not _api_key:
+        raise ValueError("model_config.json 中 api_key 为空，请先配置")
+    client = ZhipuAiClient(
+        api_key=_api_key,
+        base_url=config.get("base_url"),
+    )
 except Exception as import_error:
-    zhipu = None
-    ZHIPU_IMPORT_ERROR = import_error
+    client = None
+    CLIENT_INIT_ERROR = import_error
 else:
-    ZHIPU_IMPORT_ERROR = None
+    CLIENT_INIT_ERROR = None
+
+
+BUILTIN_TOOLS = {}
+
+BUILTIN_TOOL_DESC = ""
+
+SYSTEM_PROMPT = f"""你是一个具有工具调用能力的AI助手，请通过"思考→行动→观察"的循环来回答问题。
+
+{BUILTIN_TOOL_DESC}
+
+你必须严格按照以下格式回复：
+
+Thought: 分析当前情况，思考下一步该做什么
+Action: 工具名称: 工具的输入参数
+Observation: 工具返回的结果
+...（重复 Thought/Action/Observation 直到获得足够信息）
+Thought: 我已经获得足够信息
+Final Answer: 对用户的最终回答
+
+规则：
+- 每次只能调用一个工具
+- 得到 Observation 后必须继续 Thought
+- 不要编造工具结果，必须等待实际 Observation
+- 一旦有了答案，立即输出 Final Answer
+"""
 
 
 def get_tools():
-    return {**zhipu.TOOLS, **EXTRA_TOOLS}
+    return {**BUILTIN_TOOLS, **EXTRA_TOOLS}
 
 
 def get_system_prompt():
     return (
-        f"{zhipu.SYSTEM_PROMPT}\n\n{EXTRA_TOOL_DESC}\n"
+        f"{SYSTEM_PROMPT}\n\n{EXTRA_TOOL_DESC}\n"
         "补充规则：当问题涉及天气、城市经纬度或当前时间时，优先调用对应工具。"
     )
+
+
+def parse_response(text: str) -> dict:
+    lines = text.strip().split("\n")
+
+    action_line = None
+    final_line = None
+
+    for line in lines:
+        if line.startswith("Action:") and action_line is None:
+            action_line = line
+        if line.startswith("Final Answer:") and final_line is None:
+            final_line = line
+
+    if action_line is not None:
+        raw = action_line[len("Action:"):].strip()
+        colon_pos = raw.find(":")
+        if colon_pos != -1:
+            tool_name = raw[:colon_pos].strip()
+            tool_input = raw[colon_pos + 1:].strip()
+            return {"type": "action", "tool": tool_name, "input": tool_input}
+        else:
+            return {"type": "action", "tool": raw, "input": ""}
+
+    if final_line is not None:
+        return {"type": "final", "content": final_line[len("Final Answer:"):].strip()}
+
+    return {"type": "thought", "content": text}
 
 
 def normalize_messages(raw_messages):
@@ -81,7 +143,12 @@ def build_prompt(messages):
 
 
 def call_model(messages):
-    logger.info("[call_model] 调用模型, 消息条数=%d", len(messages))
+    if CLIENT_INIT_ERROR is not None:
+        raise CLIENT_INIT_ERROR
+
+    logger.info(
+        "[call_model] 调用模型 %s, 消息条数=%d", config["model"], len(messages)
+    )
     for idx, msg in enumerate(messages):
         logger.debug(
             "[call_model] messages[%d] role=%s content=%s",
@@ -90,11 +157,11 @@ def call_model(messages):
             msg["content"][:300],
         )
 
-    response = zhipu.client.chat.completions.create(
-        model="glm-5.2",
+    response = client.chat.completions.create(
+        model=config["model"],
         messages=messages,
-        max_tokens=65536,
-        temperature=0.7,
+        max_tokens=config.get("max_tokens", 65536),
+        temperature=config.get("temperature", 0.7),
     )
 
     content = ""
@@ -113,10 +180,10 @@ def call_model(messages):
 
 
 def run_agent_with_history(raw_messages, max_steps=10):
-    if ZHIPU_IMPORT_ERROR is not None:
+    if CLIENT_INIT_ERROR is not None:
         return {
             "ok": False,
-            "error": f"无法加载 zhipu.py: {ZHIPU_IMPORT_ERROR}",
+            "error": f"无法初始化模型客户端: {CLIENT_INIT_ERROR}",
             "answer": "",
             "trace": [],
         }
@@ -140,7 +207,7 @@ def run_agent_with_history(raw_messages, max_steps=10):
     for step in range(max_steps):
         logger.info("[agent_loop] ===== Step %d/%d =====", step + 1, max_steps)
         full_content, usage = call_model(messages)
-        parsed = zhipu.parse_response(full_content)
+        parsed = parse_response(full_content)
         logger.info("[agent_loop] 解析结果 type=%s", parsed.get("type"))
 
         trace_item = {
