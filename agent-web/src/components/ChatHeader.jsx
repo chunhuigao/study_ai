@@ -17,6 +17,20 @@ import {
 const { Header } = Layout;
 const { Title, Text } = Typography;
 
+const TOKEN_UNITS = ['', 'K', 'M', 'G', 'T', 'P', 'E'];
+
+function formatTokens(n) {
+  if (n == null || isNaN(n)) return '0';
+  let value = Number(n);
+  if (value < 1000) return String(value);
+  let unitIndex = 0;
+  while (value >= 1000 && unitIndex < TOKEN_UNITS.length - 1) {
+    value /= 1000;
+    unitIndex++;
+  }
+  return `${value % 1 === 0 ? value : value.toFixed(1)}${TOKEN_UNITS[unitIndex]}`;
+}
+
 const ChatHeader = React.memo(function ChatHeader({
   currentModel,
   availableModels,
@@ -72,12 +86,12 @@ const ChatHeader = React.memo(function ChatHeader({
           ) : null}
           {totalUsage ? (
             <Text type="secondary" style={{ fontSize: 12 }}>
-              本次 {totalUsage.total_tokens} tokens
+              本次 {formatTokens(totalUsage.total_tokens)} tokens
             </Text>
           ) : null}
           {cumulativeUsage ? (
             <Tooltip
-              title={`输入: ${cumulativeUsage.prompt_tokens} | 输出: ${cumulativeUsage.completion_tokens} | 合计: ${cumulativeUsage.total_tokens} | 请求: ${cumulativeUsage.request_count}次`}
+              title={`输入: ${formatTokens(cumulativeUsage.prompt_tokens)} | 输出: ${formatTokens(cumulativeUsage.completion_tokens)} | 合计: ${formatTokens(cumulativeUsage.total_tokens)} | 请求: ${cumulativeUsage.request_count}次`}
             >
               <Badge
                 count={cumulativeUsage.request_count}
@@ -85,7 +99,7 @@ const ChatHeader = React.memo(function ChatHeader({
                 color="#1f5f6b"
               >
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  累计 {cumulativeUsage.total_tokens} tokens
+                  累计 {formatTokens(cumulativeUsage.total_tokens)} tokens
                 </Text>
               </Badge>
             </Tooltip>
