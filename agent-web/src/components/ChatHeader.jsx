@@ -1,18 +1,6 @@
-import React, { useMemo } from 'react';
-import {
-  Layout,
-  Typography,
-  Button,
-  Select,
-  Space,
-  Badge,
-  Tooltip,
-} from 'antd';
-import {
-  DeleteOutlined,
-  ThunderboltOutlined,
-  InfoCircleOutlined,
-} from '@ant-design/icons';
+import React from 'react';
+import { Layout, Typography, Button, Space, Badge, Tooltip } from 'antd';
+import { DeleteOutlined, ThunderboltOutlined } from '@ant-design/icons';
 
 const { Header } = Layout;
 const { Title, Text } = Typography;
@@ -32,30 +20,11 @@ function formatTokens(n) {
 }
 
 const ChatHeader = React.memo(function ChatHeader({
-  currentModel,
-  availableModels,
   isSending,
   totalUsage,
   cumulativeUsage,
-  onSwitchModel,
   onReset,
 }) {
-  const modelOptions = useMemo(
-    () =>
-      availableModels.map((m) => ({
-        value: m.id,
-        label: (
-          <Space size={4}>
-            <span>{m.name}</span>
-            <Tooltip title={m.description}>
-              <InfoCircleOutlined style={{ color: '#bfbfbf', fontSize: 11 }} />
-            </Tooltip>
-          </Space>
-        ),
-      })),
-    [availableModels],
-  );
-
   return (
     <Header className="app-header">
       <div className="header-left">
@@ -68,22 +37,6 @@ const ChatHeader = React.memo(function ChatHeader({
           </Title>
         </div>
         <div className="header-meta">
-          {availableModels.length > 0 ? (
-            <Space size={4} align="center">
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                模型
-              </Text>
-              <Select
-                size="small"
-                value={currentModel}
-                onChange={onSwitchModel}
-                disabled={isSending}
-                options={modelOptions}
-                style={{ width: 150 }}
-                popupMatchSelectWidth={false}
-              />
-            </Space>
-          ) : null}
           {totalUsage ? (
             <Text type="secondary" style={{ fontSize: 12 }}>
               本次 {formatTokens(totalUsage.total_tokens)} tokens
@@ -98,7 +51,10 @@ const ChatHeader = React.memo(function ChatHeader({
                 size="small"
                 color="#1f5f6b"
               >
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text
+                  type="secondary"
+                  style={{ fontSize: 12, whiteSpace: 'nowrap' }}
+                >
                   累计 {formatTokens(cumulativeUsage.total_tokens)} tokens
                 </Text>
               </Badge>

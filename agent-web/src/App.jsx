@@ -34,6 +34,7 @@ function App() {
   const [cumulativeUsage, setCumulativeUsage] = useState(null);
   const [currentModel, setCurrentModel] = useState('');
   const [availableModels, setAvailableModels] = useState([]);
+  const [attachedFiles, setAttachedFiles] = useState([]);
 
   const inputRef = useRef('');
   const sendingRef = useRef(false);
@@ -133,6 +134,15 @@ function App() {
     setTotalUsage(null);
     setError('');
     setInput('');
+    setAttachedFiles([]);
+  }, []);
+
+  const handleFileSelect = useCallback((files) => {
+    setAttachedFiles((prev) => [...prev, ...files]);
+  }, []);
+
+  const handleRemoveFile = useCallback((index) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const handleSwitchModel = useCallback(
@@ -171,12 +181,9 @@ function App() {
       <Layout className="app-shell">
         <Layout className="chat-layout">
           <ChatHeader
-            currentModel={currentModel}
-            availableModels={availableModels}
             isSending={isSending}
             totalUsage={totalUsage}
             cumulativeUsage={cumulativeUsage}
-            onSwitchModel={handleSwitchModel}
             onReset={resetChat}
           />
 
@@ -199,6 +206,12 @@ function App() {
               isSending={isSending}
               onInputChange={setInput}
               onSend={sendMessage}
+              currentModel={currentModel}
+              availableModels={availableModels}
+              onSwitchModel={handleSwitchModel}
+              onFileSelect={handleFileSelect}
+              attachedFiles={attachedFiles}
+              onRemoveFile={handleRemoveFile}
             />
           </Content>
         </Layout>
