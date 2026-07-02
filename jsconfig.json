@@ -6,5 +6,6 @@
     "moduleResolution": "Bundler",
     "target": "ES2022"
   },
+  "include": ["agent-web/src", "agent-server"],
   "exclude": ["node_modules", "dist"]
 }

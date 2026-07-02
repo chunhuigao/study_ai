@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "electron/main.js",
+  "main": "agent-server/electron/main.js",
   "scripts": {
-    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
-    "start": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
-    "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1",
+    "dev": "concurrently -k \"vite --config agent-web/vite.config.js --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "start": "concurrently -k \"vite --config agent-web/vite.config.js --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "build": "vite build --config agent-web/vite.config.js",
+    "preview": "vite preview --config agent-web/vite.config.js --host 127.0.0.1",
     "electron": "electron ."
   },
   "dependencies": {

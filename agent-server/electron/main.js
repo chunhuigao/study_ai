@@ -5,7 +5,9 @@ import { spawn } from 'node:child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, '..');
+const serverDir = path.resolve(__dirname, '..');
+const rootDir = path.resolve(serverDir, '..');
+const webDistDir = path.join(rootDir, 'dist');
 
 const isDev = process.env.NODE_ENV !== 'production';
 const rendererUrl = process.env.VITE_DEV_SERVER_URL ?? 'http://127.0.0.1:5173';
@@ -28,15 +30,15 @@ function createWindow() {
   if (isDev) {
     win.loadURL(rendererUrl);
   } else {
-    win.loadFile(path.join(rootDir, 'dist', 'index.html'));
+    win.loadFile(path.join(webDistDir, 'index.html'));
   }
 }
 
 function callAgent(payload) {
   return new Promise((resolve, reject) => {
     const pythonCommand = process.env.PYTHON ?? 'python3';
-    const child = spawn(pythonCommand, [path.join(rootDir, 'agent_bridge.py')], {
-      cwd: rootDir,
+    const child = spawn(pythonCommand, [path.join(serverDir, 'agent_bridge.py')], {
+      cwd: serverDir,
       stdio: ['pipe', 'pipe', 'pipe']
     });
 

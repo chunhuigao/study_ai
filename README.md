@@ -1,6 +1,25 @@
 # Electron Agent
 
-一个最简 Electron + React Agent 示例。Electron 主进程通过 `agent_bridge.py` 调用现有的 `zhipu.py`，前端负责多轮对话 UI 和执行轨迹展示。
+一个最简 Electron + React Agent 示例。前端负责多轮对话 UI 和执行轨迹展示，服务端侧负责 Electron IPC 与 Python Agent 桥接。
+
+## 目录结构
+
+```text
+agent-web/
+  index.html
+  src/
+  vite.config.js
+
+agent-server/
+  agent_bridge.py
+  electron/
+
+zhipu.py
+```
+
+- `agent-web`：React + Vite 前端。
+- `agent-server`：Electron 主进程、preload 和 Python bridge。
+- `zhipu.py`：保留在项目根目录，`agent-server/agent_bridge.py` 会导入并复用其中的模型调用、工具和解析逻辑。
 
 ## 运行
 
