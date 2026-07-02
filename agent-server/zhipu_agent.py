@@ -1,5 +1,4 @@
 import logging
-import os
 import sys
 from pathlib import Path
 
@@ -51,6 +50,7 @@ Final Answer: 对用户的最终回答
 - 得到 Observation 后必须继续 Thought
 - 不要编造工具结果，必须等待实际 Observation
 - 一旦有了答案，立即输出 Final Answer
+- Final Answer 必须包含工具返回的完整数据，不要省略或概括。例如查询天气时，必须包含温度、体感温度、湿度、风速等全部信息；查询时间时，必须包含完整的日期和时间
 """
 
 
@@ -69,13 +69,13 @@ def parse_response(text: str) -> dict:
     lines = text.strip().split("\n")
 
     action_line = None
-    final_line = None
+    final_answer_idx = None
 
-    for line in lines:
+    for i, line in enumerate(lines):
         if line.startswith("Action:") and action_line is None:
             action_line = line
-        if line.startswith("Final Answer:") and final_line is None:
-            final_line = line
+        if line.startswith("Final Answer:") and final_answer_idx is None:
+            final_answer_idx = i
 
     if action_line is not None:
         raw = action_line[len("Action:"):].strip()
@@ -87,8 +87,11 @@ def parse_response(text: str) -> dict:
         else:
             return {"type": "action", "tool": raw, "input": ""}
 
-    if final_line is not None:
-        return {"type": "final", "content": final_line[len("Final Answer:"):].strip()}
+    if final_answer_idx is not None:
+        first_line = lines[final_answer_idx][len("Final Answer:"):].strip()
+        remaining = "\n".join(lines[final_answer_idx + 1:]).strip()
+        content = f"{first_line}\n{remaining}" if remaining else first_line
+        return {"type": "final", "content": content.strip()}
 
     return {"type": "thought", "content": text}
 
