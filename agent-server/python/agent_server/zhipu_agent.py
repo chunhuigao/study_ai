@@ -18,15 +18,21 @@ try:
     _api_key = config["api_key"]
     if not _api_key:
         raise ValueError("agent-server/config/model_config.json 中 api_key 为空，请先配置")
-    client = ZhipuAiClient(
+    _default_client = ZhipuAiClient(
         api_key=_api_key,
         base_url=config.get("base_url"),
     )
 except Exception as import_error:
-    client = None
+    _default_client = None
     CLIENT_INIT_ERROR = import_error
 else:
     CLIENT_INIT_ERROR = None
+
+
+def _get_client():
+    if CLIENT_INIT_ERROR is not None:
+        return None, CLIENT_INIT_ERROR
+    return _default_client, None
 
 
 BUILTIN_TOOLS = {}
@@ -147,11 +153,15 @@ def build_prompt(messages):
 
 
 def call_model(messages):
-    if CLIENT_INIT_ERROR is not None:
-        raise CLIENT_INIT_ERROR
+    client, init_error = _get_client()
+    if init_error is not None:
+        raise init_error
+
+    from .model_config import load_config
+    current_config = load_config()
 
     logger.info(
-        "[call_model] 调用模型 %s, 消息条数=%d", config["model"], len(messages)
+        "[call_model] 调用模型 %s, 消息条数=%d", current_config["model"], len(messages)
     )
     for idx, msg in enumerate(messages):
         logger.debug(
@@ -162,10 +172,10 @@ def call_model(messages):
         )
 
     response = client.chat.completions.create(
-        model=config["model"],
+        model=current_config["model"],
         messages=messages,
-        max_tokens=config.get("max_tokens", 65536),
-        temperature=config.get("temperature", 0.7),
+        max_tokens=current_config.get("max_tokens", 65536),
+        temperature=current_config.get("temperature", 0.7),
     )
 
     content = ""

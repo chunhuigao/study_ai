@@ -94,6 +94,36 @@ button:disabled {
   font-weight: 600;
 }
 
+.model-selector-wrapper {
+  color: #71685d;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.model-selector {
+  font: inherit;
+  font-size: 13px;
+  padding: 3px 8px;
+  border: 1px solid #cfc5b6;
+  border-radius: 4px;
+  background: #fffefa;
+  color: #312a22;
+  cursor: pointer;
+  outline: none;
+}
+
+.model-selector:focus {
+  border-color: #1f5f6b;
+  box-shadow: 0 0 0 2px rgba(31, 95, 107, 0.13);
+}
+
+.model-selector:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
 .secondary-button {
   min-width: 72px;
   height: 36px;

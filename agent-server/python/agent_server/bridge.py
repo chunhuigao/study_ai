@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .zhipu_agent import run_agent_with_history
+from .model_config import get_available_models, load_config, switch_model
 
 SERVER_DIR = Path(__file__).resolve().parents[2]
 LOG_DIR = SERVER_DIR / "var" / "logs"
@@ -93,6 +94,34 @@ def main():
     if "--get-token-usage" in sys.argv:
         cumulative = load_token_usage()
         print(json.dumps(cumulative, ensure_ascii=False))
+        return
+
+    if "--get-models" in sys.argv:
+        current = load_config()
+        models = get_available_models()
+        result = {
+            "current": current.get("model", ""),
+            "models": models,
+        }
+        print(json.dumps(result, ensure_ascii=False))
+        return
+
+    if "--switch-model" in sys.argv:
+        model_id = ""
+        for i, arg in enumerate(sys.argv):
+            if arg == "--switch-model" and i + 1 < len(sys.argv):
+                model_id = sys.argv[i + 1]
+                break
+        if not model_id:
+            print(json.dumps({"ok": False, "error": "请指定模型ID"}, ensure_ascii=False))
+            return
+        success, message = switch_model(model_id)
+        current = load_config()
+        print(json.dumps({
+            "ok": success,
+            "message": message,
+            "current": current.get("model", ""),
+        }, ensure_ascii=False))
         return
 
     try:

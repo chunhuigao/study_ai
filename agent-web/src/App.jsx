@@ -73,6 +73,8 @@ function App() {
   const [error, setError] = useState('');
   const [totalUsage, setTotalUsage] = useState(null);
   const [cumulativeUsage, setCumulativeUsage] = useState(null);
+  const [currentModel, setCurrentModel] = useState('');
+  const [availableModels, setAvailableModels] = useState([]);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -86,6 +88,18 @@ function App() {
         .then((data) => {
           if (data && data.total_tokens > 0) {
             setCumulativeUsage(data);
+          }
+        })
+        .catch(() => {});
+    }
+
+    if (window.agentApi?.getModels) {
+      window.agentApi
+        .getModels()
+        .then((data) => {
+          if (data) {
+            setCurrentModel(data.current || '');
+            setAvailableModels(data.models || []);
           }
         })
         .catch(() => {});
@@ -161,6 +175,24 @@ function App() {
     setInput('');
   }
 
+  async function handleSwitchModel(event) {
+    const modelId = event.target.value;
+    if (!modelId || modelId === currentModel) {
+      return;
+    }
+
+    try {
+      const result = await window.agentApi.switchModel(modelId);
+      if (result.ok) {
+        setCurrentModel(modelId);
+      } else {
+        setError(result.message || '切换模型失败');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '切换模型失败');
+    }
+  }
+
   return (
     <main className="app-shell">
       <section className="chat-area">
@@ -168,6 +200,23 @@ function App() {
           <div>
             <h1>React 前端 + Electron 主进程 + Python ReAct Agent</h1>
             <div className="token-usage-group">
+              {availableModels.length > 0 ? (
+                <span className="model-selector-wrapper">
+                  模型：
+                  <select
+                    className="model-selector"
+                    value={currentModel}
+                    onChange={handleSwitchModel}
+                    disabled={isSending}
+                  >
+                    {availableModels.map((m) => (
+                      <option key={m.id} value={m.id} title={m.description}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              ) : null}
               {totalUsage ? (
                 <span className="token-usage">
                   本次 — 输入: {totalUsage.prompt_tokens} | 输出:{' '}

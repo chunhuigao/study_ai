@@ -140,6 +140,59 @@ ipcMain.handle('agent:getTokenUsage', async () => {
   return getTokenUsage();
 });
 
+function runPythonCommand(args) {
+  return new Promise((resolve, reject) => {
+    const pythonCommand = process.env.PYTHON ?? 'python3';
+    const child = spawn(
+      pythonCommand,
+      [path.join(serverDir, 'agent_bridge.py'), ...args],
+      {
+        cwd: serverDir,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
+    );
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on('error', (error) => {
+      reject(new Error(`无法启动 Python: ${error.message}`));
+    });
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(stderr.trim() || `命令执行失败，退出码 ${code}`));
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(stdout));
+      } catch (error) {
+        reject(new Error(`解析结果失败: ${error.message}`));
+      }
+    });
+  });
+}
+
+ipcMain.handle('agent:getModels', async () => {
+  return runPythonCommand(['--get-models']);
+});
+
+ipcMain.handle('agent:switchModel', async (_event, modelId) => {
+  if (!modelId || typeof modelId !== 'string') {
+    throw new Error('模型ID无效');
+  }
+  return runPythonCommand(['--switch-model', modelId]);
+});
+
 app.whenReady().then(() => {
   createWindow();
 
