@@ -11,7 +11,7 @@ def read_webpage(url: str) -> str:
     1. 请求目标 URL 获取 HTML
     2. 移除 script、style、nav、footer 等非正文标签
     3. 将 HTML 转为纯文本，清理多余空白
-    4. 截取前 3000 字符返回，避免内容过长
+    4. 返回完整文本内容
 
     Args:
         url: 目标网页 URL，例如 "https://example.com/article"
@@ -41,20 +41,12 @@ def read_webpage(url: str) -> str:
     text = re.sub(r'\n{3,}', '\n\n', text)
     text = text.strip()
 
-    max_chars = 3000
-    truncated = len(text) > max_chars
-    if truncated:
-        text = text[:max_chars]
-
     lines = []
     if title:
         lines.append(f"标题: {title}")
         lines.append(f"来源: {url}")
         lines.append("")
     lines.append(text)
-    if truncated:
-        lines.append("")
-        lines.append(f"... (内容过长，已截断，全文共 {len(text)} 字符)")
 
     return "\n".join(lines)
 
