@@ -8,6 +8,7 @@ import ChatHeader from './components/ChatHeader';
 import MessageList from './components/MessageList';
 import Composer from './components/Composer';
 import TracePanel from './components/TracePanel';
+import SkillsPanel from './components/SkillsPanel';
 
 const { Content, Sider } = Layout;
 const { Text } = Typography;
@@ -35,6 +36,9 @@ function App() {
   const [currentModel, setCurrentModel] = useState('');
   const [availableModels, setAvailableModels] = useState([]);
   const [attachedFiles, setAttachedFiles] = useState([]);
+  const [skills, setSkills] = useState([]);
+  const [availableTools, setAvailableTools] = useState([]);
+  const [isSkillSaving, setIsSkillSaving] = useState(false);
 
   const inputRef = useRef('');
   const sendingRef = useRef(false);
@@ -71,6 +75,16 @@ function App() {
             setCurrentModel(data.current || '');
             setAvailableModels(data.models || []);
           }
+        })
+        .catch(() => {});
+    }
+
+    if (window.agentApi?.getSkills) {
+      window.agentApi
+        .getSkills()
+        .then((data) => {
+          setSkills(data?.skills || []);
+          setAvailableTools(data?.availableTools || []);
         })
         .catch(() => {});
     }
@@ -165,6 +179,47 @@ function App() {
     [currentModel],
   );
 
+  const handleToggleSkill = useCallback(async (skillId, enabled) => {
+    if (!window.agentApi?.setSkillEnabled) {
+      return;
+    }
+
+    setIsSkillSaving(true);
+    try {
+      const result = await window.agentApi.setSkillEnabled(skillId, enabled);
+      if (!result.ok) {
+        throw new Error(result.message || result.error || '更新 skill 失败');
+      }
+      setSkills(result.skills || []);
+      setAvailableTools(result.availableTools || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '更新 skill 失败');
+    } finally {
+      setIsSkillSaving(false);
+    }
+  }, []);
+
+  const handleCreateSkill = useCallback(async (skill) => {
+    if (!window.agentApi?.upsertSkill) {
+      return;
+    }
+
+    setIsSkillSaving(true);
+    try {
+      const result = await window.agentApi.upsertSkill(skill);
+      if (!result.ok) {
+        throw new Error(result.message || result.error || '保存 skill 失败');
+      }
+      setSkills(result.skills || []);
+      setAvailableTools(result.availableTools || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存 skill 失败');
+      throw err;
+    } finally {
+      setIsSkillSaving(false);
+    }
+  }, []);
+
   return (
     <ConfigProvider
       locale={zhCN}
@@ -217,6 +272,13 @@ function App() {
         </Layout>
 
         <Sider width={380} className="trace-sider" theme="light">
+          <SkillsPanel
+            skills={skills}
+            availableTools={availableTools}
+            isLoading={isSkillSaving}
+            onToggleSkill={handleToggleSkill}
+            onCreateSkill={handleCreateSkill}
+          />
           <div className="trace-sider-header">
             <Text strong style={{ fontSize: 15 }}>
               执行轨迹

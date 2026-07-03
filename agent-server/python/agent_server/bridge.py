@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .zhipu_agent import run_agent_with_history
 from .model_config import get_available_models, load_config, switch_model
+from .skills import list_skill_payload, set_skill_enabled, upsert_skill
 
 SERVER_DIR = Path(__file__).resolve().parents[2]
 LOG_DIR = SERVER_DIR / "var" / "logs"
@@ -122,6 +123,42 @@ def main():
             "message": message,
             "current": current.get("model", ""),
         }, ensure_ascii=False))
+        return
+
+    if "--get-skills" in sys.argv:
+        print(json.dumps(list_skill_payload(), ensure_ascii=False))
+        return
+
+    if "--set-skill-enabled" in sys.argv:
+        skill_id = ""
+        enabled = None
+        for i, arg in enumerate(sys.argv):
+            if arg == "--set-skill-enabled" and i + 2 < len(sys.argv):
+                skill_id = sys.argv[i + 1]
+                enabled = sys.argv[i + 2].lower() in ("1", "true", "yes", "on")
+                break
+        if not skill_id or enabled is None:
+            print(json.dumps({"ok": False, "error": "请指定 skill id 和启用状态"}, ensure_ascii=False))
+            return
+        success, message = set_skill_enabled(skill_id, enabled)
+        result = {"ok": success, "message": message, **list_skill_payload()}
+        print(json.dumps(result, ensure_ascii=False))
+        return
+
+    if "--upsert-skill" in sys.argv:
+        try:
+            payload = json.loads(sys.stdin.read() or "{}")
+        except json.JSONDecodeError as error:
+            print(json.dumps({"ok": False, "error": f"skill JSON 无效: {error}"}, ensure_ascii=False))
+            return
+        success, message, skill = upsert_skill(payload)
+        result = {
+            "ok": success,
+            "message": message,
+            "skill": skill,
+            **list_skill_payload(),
+        }
+        print(json.dumps(result, ensure_ascii=False))
         return
 
     try:

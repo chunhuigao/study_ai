@@ -1,0 +1,22 @@
+{
+  "skills": [
+    {
+      "id": "writing_style",
+      "name": "写作风格",
+      "description": "让 Agent 用更简洁、结构化的方式回答。",
+      "enabled": false,
+      "builtin": false,
+      "tools": [],
+      "instructions": "回答时优先给出结论，再列出关键步骤；避免不必要的寒暄。"
+    },
+    {
+      "id": "research_mode",
+      "name": "研究模式",
+      "description": "启用搜索和网页读取能力，并要求给出来源。",
+      "enabled": false,
+      "builtin": false,
+      "tools": ["web_search", "read_webpage"],
+      "instructions": "需要事实核验时先搜索，再读取最相关网页；最终答案中说明信息来源。"
+    }
+  ]
+}

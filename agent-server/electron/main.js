@@ -193,6 +193,69 @@ ipcMain.handle('agent:switchModel', async (_event, modelId) => {
   return runPythonCommand(['--switch-model', modelId]);
 });
 
+ipcMain.handle('agent:getSkills', async () => {
+  return runPythonCommand(['--get-skills']);
+});
+
+ipcMain.handle('agent:setSkillEnabled', async (_event, skillId, enabled) => {
+  if (!skillId || typeof skillId !== 'string') {
+    throw new Error('skill id 无效');
+  }
+  return runPythonCommand([
+    '--set-skill-enabled',
+    skillId,
+    enabled ? 'true' : 'false',
+  ]);
+});
+
+ipcMain.handle('agent:upsertSkill', async (_event, skill) => {
+  if (!skill || typeof skill !== 'object') {
+    throw new Error('skill 配置无效');
+  }
+  return new Promise((resolve, reject) => {
+    const pythonCommand = process.env.PYTHON ?? 'python3';
+    const child = spawn(
+      pythonCommand,
+      [path.join(serverDir, 'agent_bridge.py'), '--upsert-skill'],
+      {
+        cwd: serverDir,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
+    );
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on('error', (error) => {
+      reject(new Error(`无法启动 Python: ${error.message}`));
+    });
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(stderr.trim() || `保存 skill 失败，退出码 ${code}`));
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(stdout));
+      } catch (error) {
+        reject(new Error(`解析 skill 结果失败: ${error.message}`));
+      }
+    });
+
+    child.stdin.write(JSON.stringify(skill));
+    child.stdin.end();
+  });
+});
+
 app.whenReady().then(() => {
   createWindow();
 

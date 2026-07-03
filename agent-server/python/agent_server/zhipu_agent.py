@@ -3,8 +3,7 @@ import sys
 from pathlib import Path
 
 from .model_config import config
-from .tools import TOOL_DESC as EXTRA_TOOL_DESC
-from .tools import TOOLS as EXTRA_TOOLS
+from .skills import get_enabled_tools_and_prompt
 
 logger = logging.getLogger("agent")
 
@@ -62,13 +61,15 @@ Final Answer: 对用户的最终回答
 
 
 def get_tools():
-    return {**BUILTIN_TOOLS, **EXTRA_TOOLS}
+    enabled_tools, _skill_prompt = get_enabled_tools_and_prompt()
+    return {**BUILTIN_TOOLS, **enabled_tools}
 
 
 def get_system_prompt():
+    _enabled_tools, skill_prompt = get_enabled_tools_and_prompt()
     return (
-        f"{SYSTEM_PROMPT}\n\n{EXTRA_TOOL_DESC}\n"
-        "补充规则：当问题涉及天气、城市经纬度或当前时间时，优先调用对应工具。"
+        f"{SYSTEM_PROMPT}\n\n{skill_prompt}\n"
+        "补充规则：当问题匹配某个已启用 skill 的职责时，优先遵循该 skill 的使用规则。"
     )
 
 
