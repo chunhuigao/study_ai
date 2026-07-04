@@ -58,5 +58,6 @@ pnpm start
 - 需要配置 `agent-server/config/model_config.json`，可从 `agent-server/config/model_config.example.json` 复制。
 - 可选配置 `agent-server/config/skills.json`，可从 `agent-server/config/skills.example.json` 复制；也可以在应用右侧 Skills 面板中新增和启停 skill。
 - 天气和城市地理位置工具使用 Open-Meteo 公开接口，运行时需要网络访问。
+- Computer Use 是默认关闭的内置 skill；启用后在 macOS 上需要给运行应用授予“辅助功能/自动化”权限。
 - Electron 首次安装会下载桌面运行时，安装过程不能设置 `ELECTRON_SKIP_BINARY_DOWNLOAD=1`。
 - 如果当前环境没有全局 `npm`，请使用本机 Node.js 自带的 npm 或 pnpm。
