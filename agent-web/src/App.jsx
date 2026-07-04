@@ -111,7 +111,7 @@ function App() {
 
       const result = await window.agentApi.chat({
         messages: chatHistory,
-        maxSteps: 10,
+        maxSteps: 100,
       });
 
       setTrace(result.trace ?? []);

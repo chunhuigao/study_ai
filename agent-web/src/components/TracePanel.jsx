@@ -1,6 +1,11 @@
 import React, { useMemo } from 'react';
 import { Typography, Tag, Collapse, Space } from 'antd';
-import { InfoCircleOutlined } from '@ant-design/icons';
+import {
+  BulbOutlined,
+  InfoCircleOutlined,
+  PlayCircleOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 
 const { Text, Paragraph } = Typography;
 
@@ -45,19 +50,57 @@ const TracePanel = React.memo(function TracePanel({ trace }) {
     ),
     children: (
       <div className="trace-detail">
-        {item.observation ? (
-          <div className="trace-observation">
-            <Text type="secondary" strong style={{ fontSize: 12 }}>
-              Observation:
-            </Text>
-            <Paragraph
-              style={{ margin: '4px 0 0', fontSize: 12, color: '#595959' }}
-            >
-              {item.observation}
+        {item.thought ? (
+          <div className="trace-section trace-thought">
+            <Space size={6}>
+              <BulbOutlined />
+              <Text strong style={{ fontSize: 12 }}>
+                Thought
+              </Text>
+            </Space>
+            <Paragraph className="trace-text">{item.thought}</Paragraph>
+          </div>
+        ) : null}
+
+        {item.action || item.tool ? (
+          <div className="trace-section trace-action">
+            <Space size={6}>
+              <PlayCircleOutlined />
+              <Text strong style={{ fontSize: 12 }}>
+                Action
+              </Text>
+            </Space>
+            <Paragraph className="trace-text">
+              {item.action || `${item.tool}: ${item.toolInput || ''}`}
             </Paragraph>
           </div>
         ) : null}
-        <pre className="trace-pre">{item.modelOutput}</pre>
+
+        {item.observation ? (
+          <div className="trace-section trace-observation">
+            <Space size={6}>
+              <SearchOutlined />
+              <Text strong style={{ fontSize: 12 }}>
+                Observation
+              </Text>
+            </Space>
+            <Paragraph className="trace-text">{item.observation}</Paragraph>
+          </div>
+        ) : null}
+
+        {item.finalAnswer ? (
+          <div className="trace-section trace-final">
+            <Text strong style={{ fontSize: 12 }}>
+              Final Answer
+            </Text>
+            <Paragraph className="trace-text">{item.finalAnswer}</Paragraph>
+          </div>
+        ) : null}
+
+        <details className="trace-raw">
+          <summary>原始模型输出</summary>
+          <pre className="trace-pre">{item.modelOutput}</pre>
+        </details>
       </div>
     ),
   }));

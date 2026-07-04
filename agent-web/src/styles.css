@@ -396,14 +396,50 @@ body {
 }
 
 .trace-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 0;
 }
 
-.trace-observation {
-  background: #fafafa;
+.trace-section {
   border-radius: 6px;
   padding: 8px 10px;
-  margin-bottom: 8px;
+}
+
+.trace-thought {
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+}
+
+.trace-action {
+  background: #e6f4ff;
+  border: 1px solid #91caff;
+}
+
+.trace-observation {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+}
+
+.trace-final {
+  background: #f9f0ff;
+  border: 1px solid #d3adf7;
+}
+
+.trace-text {
+  margin: 4px 0 0 !important;
+  font-size: 12px;
+  color: #595959;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.trace-raw summary {
+  cursor: pointer;
+  color: #8c8c8c;
+  font-size: 12px;
+  margin: 2px 0 6px;
 }
 
 .trace-pre {

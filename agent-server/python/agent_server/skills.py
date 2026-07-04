@@ -69,12 +69,82 @@ def load_skills():
     result = dict(builtin_by_id)
     for skill in configured:
         if skill["id"] in builtin_by_id:
-            merged = {**builtin_by_id[skill["id"]], **skill, "builtin": True}
+            builtin_skill = builtin_by_id[skill["id"]]
+            merged_tools = [
+                *builtin_skill.get("tools", []),
+                *[
+                    tool_name
+                    for tool_name in skill.get("tools", [])
+                    if tool_name not in builtin_skill.get("tools", [])
+                ],
+            ]
+            merged = {
+                **builtin_skill,
+                **skill,
+                "name": builtin_skill["name"],
+                "description": builtin_skill["description"],
+                "builtin": True,
+                "tools": merged_tools,
+                "instructions": _merge_builtin_instructions(
+                    builtin_skill.get("instructions", ""),
+                    skill.get("instructions", ""),
+                ),
+            }
             result[skill["id"]] = merged
         else:
             result[skill["id"]] = skill
 
     return list(result.values())
+
+
+def _merge_builtin_instructions(builtin_instructions, configured_instructions):
+    builtin_text = (builtin_instructions or "").strip()
+    configured_text = (configured_instructions or "").strip()
+    if not configured_text or configured_text == builtin_text:
+        return builtin_text
+    if configured_text in builtin_text:
+        return builtin_text
+
+    extra_parts = []
+    for part in _split_instruction_parts(configured_text):
+        if part and not _instruction_part_is_covered(part, builtin_text):
+            extra_parts.append(part)
+    if not extra_parts:
+        return builtin_text
+    extra_text = "；".join(extra_parts)
+    return f"{builtin_text} 本地补充规则: {extra_text}" if builtin_text else extra_text
+
+
+def _split_instruction_parts(text):
+    return [
+        part.strip()
+        for part in text.replace("。", "；").replace(";", "；").split("；")
+        if part.strip()
+    ]
+
+
+def _instruction_part_is_covered(part, builtin_text):
+    if part in builtin_text:
+        return True
+
+    normalized_part = _normalize_instruction_text(part)
+    normalized_builtin = _normalize_instruction_text(builtin_text)
+    if normalized_part and normalized_part in normalized_builtin:
+        return True
+
+    keywords = {
+        "只有当用户明确要求操作电脑、浏览器或桌面应用时才使用": ("明确要求", "电脑", "浏览器", "桌面应用"),
+        "执行点击和输入前，先用 computer_info 确认当前前台应用": ("点击", "输入", "computer_info"),
+        "不要执行删除文件、提交表单、购买、转账或其他高风险操作": ("删除文件", "提交表单", "购买", "转账", "高风险"),
+    }
+    for known_part, required_keywords in keywords.items():
+        if known_part in part:
+            return all(keyword in builtin_text for keyword in required_keywords)
+    return False
+
+
+def _normalize_instruction_text(text):
+    return "".join(str(text).replace("登陆", "登录").split())
 
 
 def save_configured_skills(skills):

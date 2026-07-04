@@ -168,9 +168,9 @@ def main():
 
         payload = json.loads(raw_input)
         raw_messages = payload.get("messages", [])
-        max_steps = payload.get("maxSteps", 10)
+        max_steps = payload.get("maxSteps", 100)
         if not isinstance(max_steps, int) or max_steps < 1:
-            max_steps = 10
+            max_steps = 100
 
         logger.info("消息条数: %d, 最大步数: %d", len(raw_messages), max_steps)
         for idx, msg in enumerate(raw_messages):

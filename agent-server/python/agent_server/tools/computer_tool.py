@@ -3,6 +3,25 @@ import re
 import subprocess
 
 
+APP_ALIASES = {
+    "chrome": "Google Chrome",
+    "google chrome": "Google Chrome",
+    "谷歌": "Google Chrome",
+    "谷歌浏览器": "Google Chrome",
+    "浏览器": "Google Chrome",
+    "safari": "Safari",
+    "edge": "Microsoft Edge",
+    "microsoft edge": "Microsoft Edge",
+}
+
+SITE_URLS = {
+    "leetcode": "https://leetcode.cn/accounts/login/",
+    "leetcode login": "https://leetcode.cn/accounts/login/",
+    "力扣": "https://leetcode.cn/accounts/login/",
+    "力扣登录": "https://leetcode.cn/accounts/login/",
+}
+
+
 def computer_info(_tool_input: str = "") -> str:
     """Return basic screen and accessibility context for computer use."""
     resolution = _screen_resolution()
@@ -34,12 +53,29 @@ def computer_open(target: str) -> str:
     if not value:
         return "错误：请输入要打开的 URL、应用名称或文件路径"
 
-    if re.match(r"^https?://", value, re.IGNORECASE):
-        cmd = ["open", value]
-    elif value.startswith("/") or value.startswith("~"):
-        cmd = ["open", value]
+    data = _parse_json_object(value)
+    if data:
+        url = _normalize_url(str(data.get("url") or data.get("target") or "").strip())
+        app = _normalize_app_name(
+            str(data.get("app") or data.get("browser") or "").strip()
+        )
+        if url and app:
+            cmd = ["open", "-a", app, url]
+        elif url:
+            cmd = ["open", url]
+        elif app:
+            cmd = ["open", "-a", app]
+        else:
+            return '错误：JSON 输入至少需要包含 "url"、"target"、"app" 或 "browser"'
     else:
-        cmd = ["open", "-a", value]
+        normalized_url = _normalize_url(value)
+        normalized_app = _normalize_app_name(value)
+        if normalized_url:
+            cmd = ["open", normalized_url]
+        elif value.startswith("/") or value.startswith("~"):
+            cmd = ["open", value]
+        else:
+            cmd = ["open", "-a", normalized_app]
 
     try:
         subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=10)
@@ -50,6 +86,56 @@ def computer_open(target: str) -> str:
         return f"打开失败: {error}"
 
     return f"已请求打开: {value}"
+
+
+def computer_open_browser(tool_input: str) -> str:
+    """Open a browser, optionally at a URL or known site login page."""
+    data = _parse_browser_open_input(tool_input)
+    browser = data["browser"]
+    url = data["url"]
+
+    cmd = ["open", "-a", browser]
+    if url:
+        cmd.append(url)
+
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=10)
+    except subprocess.CalledProcessError as error:
+        detail = (error.stderr or error.stdout or str(error)).strip()
+        return f"打开浏览器失败: {detail}"
+    except Exception as error:
+        return f"打开浏览器失败: {error}"
+
+    if url:
+        return f"已在 {browser} 中打开: {url}"
+    return f"已打开浏览器: {browser}"
+
+
+def computer_browser_state(tool_input: str = "") -> str:
+    """Return the active tab title and URL for a supported browser."""
+    browser = _normalize_app_name((tool_input or "").strip() or "Google Chrome")
+    if browser not in ("Google Chrome", "Safari", "Microsoft Edge"):
+        return f"错误：暂不支持读取浏览器状态: {browser}"
+
+    if browser == "Safari":
+        script = """
+        tell application "Safari"
+          if not running then return "浏览器未运行: Safari"
+          if not (exists front document) then return "Safari 没有打开的页面"
+          return "浏览器: Safari" & "\\n标题: " & name of front document & "\\nURL: " & URL of front document
+        end tell
+        """
+    else:
+        script = f"""
+        tell application "{browser}"
+          if not running then return "浏览器未运行: {browser}"
+          if (count of windows) = 0 then return "{browser} 没有打开的窗口"
+          set activeTab to active tab of front window
+          return "浏览器: {browser}" & "\\n标题: " & title of activeTab & "\\nURL: " & URL of activeTab
+        end tell
+        """
+    ok, output = _run_osascript(script)
+    return output if not ok else output
 
 
 def computer_move_mouse(tool_input: str) -> str:
@@ -168,6 +254,79 @@ def _parse_xy(raw):
     if not match:
         return None, None
     return int(match.group(1)), int(match.group(2))
+
+
+def _parse_json_object(raw):
+    try:
+        data = json.loads(raw)
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _parse_browser_open_input(raw):
+    value = (raw or "").strip()
+    data = _parse_json_object(value)
+    if data:
+        browser = _normalize_app_name(
+            str(data.get("browser") or data.get("app") or "Google Chrome").strip()
+        )
+        url = str(data.get("url") or "").strip()
+        site = str(data.get("site") or data.get("target") or "").strip()
+        page = str(data.get("page") or "").strip().lower()
+        if not url and site:
+            url = _site_url(site, page)
+        return {"browser": browser, "url": _normalize_url(url) if url else ""}
+
+    lowered = value.lower()
+    browser = "Google Chrome"
+    for alias, app_name in APP_ALIASES.items():
+        if alias in lowered or alias in value:
+            browser = app_name
+            break
+
+    url = _site_url(value, "login" if _contains_login_intent(value) else "")
+    if not url:
+        url = _normalize_url(value)
+    if _normalize_app_name(value) != value and not url:
+        url = ""
+    return {"browser": browser, "url": url}
+
+
+def _contains_login_intent(value):
+    lowered = (value or "").lower()
+    return "login" in lowered or "sign in" in lowered or "登录" in value or "登陆" in value
+
+
+def _site_url(site, page=""):
+    normalized = re.sub(r"\s+", " ", (site or "").strip().lower())
+    if not normalized:
+        return ""
+    if "leetcode" in normalized or "力扣" in site:
+        return SITE_URLS["leetcode login"] if page == "login" or _contains_login_intent(site) else "https://leetcode.cn/"
+    return SITE_URLS.get(normalized, "")
+
+
+def _normalize_app_name(value):
+    normalized = (value or "").strip()
+    lowered = normalized.lower()
+    return APP_ALIASES.get(lowered, APP_ALIASES.get(normalized, normalized))
+
+
+def _normalize_url(value):
+    normalized = (value or "").strip().strip('"').strip("'")
+    if not normalized:
+        return ""
+
+    site_url = _site_url(normalized, "login" if _contains_login_intent(normalized) else "")
+    if site_url:
+        return site_url
+
+    if re.match(r"^https?://", normalized, re.IGNORECASE):
+        return normalized
+    if re.match(r"^[a-z0-9.-]+\\.[a-z]{2,}(/.*)?$", normalized, re.IGNORECASE):
+        return f"https://{normalized}"
+    return ""
 
 
 def _key_code(key):

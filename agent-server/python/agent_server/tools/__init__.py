@@ -4,11 +4,13 @@ from .weather_tool import get_weather
 from .web_search_tool import web_search
 from .read_webpage_tool import read_webpage
 from .computer_tool import (
+    computer_browser_state,
     computer_click,
     computer_hotkey,
     computer_info,
     computer_move_mouse,
     computer_open,
+    computer_open_browser,
     computer_type_text,
     computer_wait,
 )
@@ -21,6 +23,8 @@ TOOLS = {
     "read_webpage": read_webpage,
     "computer_info": computer_info,
     "computer_open": computer_open,
+    "computer_open_browser": computer_open_browser,
+    "computer_browser_state": computer_browser_state,
     "computer_move_mouse": computer_move_mouse,
     "computer_click": computer_click,
     "computer_type_text": computer_type_text,
@@ -35,7 +39,9 @@ TOOL_DESCRIPTIONS = {
     "web_search": '联网搜索。输入搜索关键词，例如 "Python 最新版本" 或 "2026年世界杯"。',
     "read_webpage": '根据 URL 读取网页正文内容。输入网页 URL，例如 "https://example.com/article"。',
     "computer_info": "获取屏幕分辨率、前台应用和当前窗口标题。",
-    "computer_open": '打开 URL、应用名称或本地路径。输入例如 "https://example.com" 或 "Safari"。',
+    "computer_open": '打开 URL、应用名称或本地路径。输入例如 "https://example.com"、"Google Chrome" 或 {"app":"Google Chrome","url":"https://example.com"}。',
+    "computer_open_browser": '打开浏览器并可直接进入 URL 或站点页面。输入例如 {"browser":"Google Chrome","site":"leetcode","page":"login"} 或 "用谷歌浏览器打开 LeetCode 登录页"。',
+    "computer_browser_state": '读取当前浏览器标签页标题和 URL。输入例如 "Google Chrome"。',
     "computer_move_mouse": '移动鼠标到指定坐标。输入例如 "320,240" 或 {"x":320,"y":240}。',
     "computer_click": '点击指定屏幕坐标。输入例如 "320,240" 或 {"x":320,"y":240}。',
     "computer_type_text": "向当前焦点输入文本。",

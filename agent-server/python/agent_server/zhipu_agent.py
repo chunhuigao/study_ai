@@ -1,4 +1,6 @@
 import logging
+import json
+import re
 import sys
 from pathlib import Path
 
@@ -80,28 +82,98 @@ def parse_response(text: str) -> dict:
     final_answer_idx = None
 
     for i, line in enumerate(lines):
-        if line.startswith("Action:") and action_line is None:
+        normalized_line = line.strip()
+        if re.match(r"^Action\s*[:：]", normalized_line, re.IGNORECASE) and action_line is None:
             action_line = line
-        if line.startswith("Final Answer:") and final_answer_idx is None:
+        if re.match(r"^Final Answer\s*[:：]", normalized_line, re.IGNORECASE) and final_answer_idx is None:
             final_answer_idx = i
 
     if action_line is not None:
-        raw = action_line[len("Action:"):].strip()
-        colon_pos = raw.find(":")
-        if colon_pos != -1:
-            tool_name = raw[:colon_pos].strip()
-            tool_input = raw[colon_pos + 1:].strip()
-            return {"type": "action", "tool": tool_name, "input": tool_input}
-        else:
-            return {"type": "action", "tool": raw, "input": ""}
+        raw = re.sub(r"^Action\s*[:：]\s*", "", action_line.strip(), count=1, flags=re.IGNORECASE)
+        return _parse_action_payload(raw)
 
     if final_answer_idx is not None:
-        first_line = lines[final_answer_idx][len("Final Answer:"):].strip()
+        first_line = re.sub(
+            r"^Final Answer\s*[:：]\s*",
+            "",
+            lines[final_answer_idx].strip(),
+            count=1,
+            flags=re.IGNORECASE,
+        )
         remaining = "\n".join(lines[final_answer_idx + 1:]).strip()
         content = f"{first_line}\n{remaining}" if remaining else first_line
         return {"type": "final", "content": content.strip()}
 
     return {"type": "thought", "content": text}
+
+
+def _parse_action_payload(raw: str) -> dict:
+    value = _strip_code_fence(raw.strip())
+    if not value:
+        return {"type": "thought", "content": raw}
+
+    try:
+        data = json.loads(value)
+    except json.JSONDecodeError:
+        data = None
+
+    if isinstance(data, dict):
+        tool_name = str(
+            data.get("tool")
+            or data.get("tool_name")
+            or data.get("name")
+            or data.get("action")
+            or ""
+        ).strip()
+        tool_input = data.get("input", data.get("arguments", data.get("args", "")))
+        if isinstance(tool_input, (dict, list)):
+            tool_input = json.dumps(tool_input, ensure_ascii=False)
+        else:
+            tool_input = "" if tool_input is None else str(tool_input)
+        if tool_name:
+            return {"type": "action", "tool": tool_name, "input": tool_input.strip()}
+
+    match = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*[:：]\s*(.*)$", value, re.DOTALL)
+    if match:
+        return {
+            "type": "action",
+            "tool": match.group(1).strip(),
+            "input": match.group(2).strip(),
+        }
+
+    return {"type": "action", "tool": value.strip(), "input": ""}
+
+
+def _strip_code_fence(value: str) -> str:
+    match = re.match(r"^```(?:json|text)?\s*(.*?)\s*```$", value, re.DOTALL | re.IGNORECASE)
+    return match.group(1).strip() if match else value
+
+
+def extract_trace_parts(text: str) -> dict:
+    lines = text.strip().splitlines()
+    parts = {"thought": "", "action": "", "observation": "", "finalAnswer": ""}
+    current = None
+    buffers = {"thought": [], "observation": [], "finalAnswer": []}
+
+    for line in lines:
+        if re.match(r"^Thought\s*[:：]", line, re.IGNORECASE):
+            current = "thought"
+            buffers[current].append(re.sub(r"^Thought\s*[:：]\s*", "", line, count=1, flags=re.IGNORECASE))
+        elif re.match(r"^Action\s*[:：]", line, re.IGNORECASE):
+            current = None
+            parts["action"] = re.sub(r"^Action\s*[:：]\s*", "", line, count=1, flags=re.IGNORECASE)
+        elif re.match(r"^Observation\s*[:：]", line, re.IGNORECASE):
+            current = "observation"
+            buffers[current].append(re.sub(r"^Observation\s*[:：]\s*", "", line, count=1, flags=re.IGNORECASE))
+        elif re.match(r"^Final Answer\s*[:：]", line, re.IGNORECASE):
+            current = "finalAnswer"
+            buffers[current].append(re.sub(r"^Final Answer\s*[:：]\s*", "", line, count=1, flags=re.IGNORECASE))
+        elif current:
+            buffers[current].append(line)
+
+    for key, value in buffers.items():
+        parts[key] = "\n".join(item for item in value if item).strip()
+    return parts
 
 
 def normalize_messages(raw_messages):
@@ -194,7 +266,7 @@ def call_model(messages):
     return content, usage
 
 
-def run_agent_with_history(raw_messages, max_steps=10):
+def run_agent_with_history(raw_messages, max_steps=100):
     if CLIENT_INIT_ERROR is not None:
         return {
             "ok": False,
@@ -236,10 +308,12 @@ def run_agent_with_history(raw_messages, max_steps=10):
             "modelOutput": full_content,
             "usage": usage,
             "type": parsed.get("type"),
+            **extract_trace_parts(full_content),
         }
 
         if parsed["type"] == "final":
             trace_item["finalAnswer"] = parsed["content"]
+            trace_item["finalAnswer"] = trace_item["finalAnswer"] or parsed["content"]
             trace.append(trace_item)
             logger.info("[agent_loop] 最终答案: %s", parsed["content"][:500])
             return {
@@ -254,6 +328,7 @@ def run_agent_with_history(raw_messages, max_steps=10):
             tool_input = parsed["input"]
             trace_item["tool"] = tool_name
             trace_item["toolInput"] = tool_input
+            trace_item["action"] = trace_item["action"] or f"{tool_name}: {tool_input}"
             logger.info(
                 "[agent_loop] 调用工具: %s, 输入: %s", tool_name, tool_input[:200]
             )

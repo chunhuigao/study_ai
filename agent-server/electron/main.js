@@ -131,7 +131,7 @@ ipcMain.handle('agent:chat', async (_event, payload) => {
   }
 
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
-  const maxSteps = Number.isInteger(payload.maxSteps) ? payload.maxSteps : 10;
+  const maxSteps = Number.isInteger(payload.maxSteps) ? payload.maxSteps : 100;
 
   return callAgent({ messages, maxSteps });
 });
