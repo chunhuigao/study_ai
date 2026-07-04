@@ -264,6 +264,7 @@ body {
 .skills-panel {
   border-bottom: 1px solid #f0f0f0;
   background: #fff;
+  flex-shrink: 0;
 }
 
 .skills-panel-header {
@@ -355,6 +356,13 @@ body {
   background: #fff !important;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+.trace-sider .ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   overflow: hidden;
 }
 
