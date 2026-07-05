@@ -5,6 +5,9 @@
   "description": "Relay desktop app for learning AI with a plan-and-execute agent.",
   "type": "module",
   "scripts": {
+    "start": "node scripts/dev.mjs",
+    "dev:all": "node scripts/dev.mjs",
+    "dev:server": "agent-server/.venv/bin/uvicorn relay.server:app --reload --host 127.0.0.1 --port 8000",
     "dev": "vite --host 127.0.0.1",
     "electron:compile": "tsc -p tsconfig.electron.json",
     "electron:dev": "concurrently -k \"vite --host 127.0.0.1\" \"tsc -w -p tsconfig.electron.json\" \"wait-on http://127.0.0.1:5173 dist-electron/main.js && VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",

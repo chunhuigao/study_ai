@@ -6,6 +6,7 @@ dist-electron
 .venv
 agent-server/.venv
 __pycache__
+*.egg-info
 zhipu.py
 agent-server/config/model_config.json
 agent-server/config/skills.json

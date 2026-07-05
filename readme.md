@@ -24,7 +24,43 @@ frontend/src/renderer/       React 界面
 
 ## 启动
 
-后端：
+一键本地调试：
+
+```bash
+pnpm start
+```
+
+第一次运行会自动准备：
+
+- `agent-server/.venv`
+- 后端核心依赖
+- 前端 `node_modules`
+
+启动后访问：
+
+- 前端：`http://127.0.0.1:5173`
+- 后端：`http://127.0.0.1:8000`
+- WebSocket：`ws://127.0.0.1:8000/ws`
+
+可选端口：
+
+```bash
+RELAY_API_PORT=8010 RELAY_WEB_PORT=5174 pnpm start
+```
+
+如果提示端口已占用，可以先查看占用进程：
+
+```bash
+lsof -nP -iTCP:8000 -sTCP:LISTEN
+```
+
+也可以直接换端口启动：
+
+```bash
+RELAY_API_PORT=8010 RELAY_WEB_PORT=5174 pnpm start
+```
+
+后端单独启动：
 
 ```bash
 cd agent-server
@@ -34,23 +70,18 @@ pip install -e .
 uvicorn relay.server:app --reload --host 127.0.0.1 --port 8000
 ```
 
-如果要启用真正的 AgentScope runtime：
+前端单独启动：
 
 ```bash
-pip install -e '.[agentscope]'
-```
-
-前端：
-
-```bash
-pnpm install
 pnpm dev
 ```
 
-Electron：
+如果要启用真正的 AgentScope runtime：
 
 ```bash
-pnpm electron:dev
+cd agent-server
+source .venv/bin/activate
+pip install -e '.[agentscope]'
 ```
 
 打开界面后输入学习目标，例如：
