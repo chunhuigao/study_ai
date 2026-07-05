@@ -2,7 +2,7 @@ name: Sync to Gitee
 
 on:
   push:
-    branches: [main]  # 触发同步的分支
+    branches: [main, study_agent] # 触发同步的分支
 
 jobs:
   sync:
@@ -15,5 +15,5 @@ jobs:
         uses: wei/git-sync@v3
         with:
           ssh_private_key: ${{ secrets.GITEE_PRIVATE_KEY }}
-          source_repo: "git@github.com:chunhuigao/study_ai.git"
-          destination_repo: "git@gitee.com:beidouluofanchen/study_ai.git"
+          source_repo: 'git@github.com:chunhuigao/study_ai.git'
+          destination_repo: 'git@gitee.com:beidouluofanchen/study_ai.git'
