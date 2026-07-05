@@ -1,0 +1,11 @@
+{
+  "id": "builtin.agent_code_lab",
+  "name": "Agent Code Lab",
+  "description": "为 agent 学习者设计小型可运行实验，强调日志、状态和可观察性。",
+  "domains": ["code"],
+  "prompt": "每个练习都包含输入、预期输出、运行命令和验收标准。",
+  "metadata": {
+    "level": "builtin"
+  }
+}
+
