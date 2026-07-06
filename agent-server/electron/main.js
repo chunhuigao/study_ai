@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
+import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawn } from 'node:child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,12 +14,12 @@ const rendererUrl = process.env.VITE_DEV_SERVER_URL ?? 'http://127.0.0.1:5173';
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1040,
-    height: 760,
-    minWidth: 760,
-    minHeight: 560,
-    title: 'Electron Agent',
-    backgroundColor: '#f5f2eb',
+    width: 1180,
+    height: 780,
+    minWidth: 920,
+    minHeight: 640,
+    title: 'AI RAG Learning',
+    backgroundColor: '#f7f8fa',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -34,17 +34,13 @@ function createWindow() {
   }
 }
 
-function callAgent(payload) {
+function runPython(args, payload) {
   return new Promise((resolve, reject) => {
     const pythonCommand = process.env.PYTHON ?? 'python3';
-    const child = spawn(
-      pythonCommand,
-      [path.join(serverDir, 'agent_bridge.py')],
-      {
-        cwd: serverDir,
-        stdio: ['pipe', 'pipe', 'pipe'],
-      },
-    );
+    const child = spawn(pythonCommand, [path.join(serverDir, 'agent_bridge.py'), ...args], {
+      cwd: serverDir,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
 
     let stdout = '';
     let stderr = '';
@@ -52,208 +48,49 @@ function callAgent(payload) {
     child.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
     });
-
     child.stderr.on('data', (chunk) => {
       stderr += chunk.toString();
     });
-
     child.on('error', (error) => {
       reject(new Error(`无法启动 Python: ${error.message}`));
     });
-
     child.on('close', (code) => {
       if (code !== 0) {
-        reject(
-          new Error(stderr.trim() || `Agent 进程异常退出，退出码 ${code}`),
-        );
+        reject(new Error(stderr.trim() || `Python 进程异常退出，退出码 ${code}`));
         return;
       }
 
       try {
         resolve(JSON.parse(stdout));
       } catch (error) {
-        reject(new Error(`Agent 返回了无法解析的结果: ${error.message}`));
+        reject(new Error(`Python 返回了无法解析的结果: ${error.message}`));
       }
     });
 
-    child.stdin.write(JSON.stringify(payload));
+    if (payload) {
+      child.stdin.write(JSON.stringify(payload));
+    }
     child.stdin.end();
   });
 }
 
-function getTokenUsage() {
-  return new Promise((resolve, reject) => {
-    const pythonCommand = process.env.PYTHON ?? 'python3';
-    const child = spawn(
-      pythonCommand,
-      [path.join(serverDir, 'agent_bridge.py'), '--get-token-usage'],
-      {
-        cwd: serverDir,
-        stdio: ['pipe', 'pipe', 'pipe'],
-      },
-    );
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    child.on('error', (error) => {
-      reject(new Error(`无法启动 Python: ${error.message}`));
-    });
-
-    child.on('close', (code) => {
-      if (code !== 0) {
-        reject(
-          new Error(stderr.trim() || `获取 Token 用量失败，退出码 ${code}`),
-        );
-        return;
-      }
-
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (error) {
-        reject(new Error(`解析 Token 用量失败: ${error.message}`));
-      }
-    });
-  });
-}
-
-ipcMain.handle('agent:chat', async (_event, payload) => {
-  if (!payload || typeof payload !== 'object') {
-    throw new Error('请求参数无效');
+ipcMain.handle('rag:ingestPdf', async (_event, filePath) => {
+  if (!filePath || typeof filePath !== 'string') {
+    throw new Error('PDF 文件路径无效');
   }
-
-  const messages = Array.isArray(payload.messages) ? payload.messages : [];
-  const maxSteps = Number.isInteger(payload.maxSteps) ? payload.maxSteps : 100;
-
-  return callAgent({ messages, maxSteps });
+  return runPython(['--rag-ingest-pdf', filePath]);
 });
 
-ipcMain.handle('agent:getTokenUsage', async () => {
-  return getTokenUsage();
+ipcMain.handle('rag:query', async (_event, payload) => {
+  return runPython(['--rag-query'], payload || {});
 });
 
-function runPythonCommand(args) {
-  return new Promise((resolve, reject) => {
-    const pythonCommand = process.env.PYTHON ?? 'python3';
-    const child = spawn(
-      pythonCommand,
-      [path.join(serverDir, 'agent_bridge.py'), ...args],
-      {
-        cwd: serverDir,
-        stdio: ['pipe', 'pipe', 'pipe'],
-      },
-    );
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    child.on('error', (error) => {
-      reject(new Error(`无法启动 Python: ${error.message}`));
-    });
-
-    child.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(stderr.trim() || `命令执行失败，退出码 ${code}`));
-        return;
-      }
-
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (error) {
-        reject(new Error(`解析结果失败: ${error.message}`));
-      }
-    });
-  });
-}
-
-ipcMain.handle('agent:getModels', async () => {
-  return runPythonCommand(['--get-models']);
+ipcMain.handle('rag:documents', async () => {
+  return runPython(['--rag-documents']);
 });
 
-ipcMain.handle('agent:switchModel', async (_event, modelId) => {
-  if (!modelId || typeof modelId !== 'string') {
-    throw new Error('模型ID无效');
-  }
-  return runPythonCommand(['--switch-model', modelId]);
-});
-
-ipcMain.handle('agent:getSkills', async () => {
-  return runPythonCommand(['--get-skills']);
-});
-
-ipcMain.handle('agent:setSkillEnabled', async (_event, skillId, enabled) => {
-  if (!skillId || typeof skillId !== 'string') {
-    throw new Error('skill id 无效');
-  }
-  return runPythonCommand([
-    '--set-skill-enabled',
-    skillId,
-    enabled ? 'true' : 'false',
-  ]);
-});
-
-ipcMain.handle('agent:upsertSkill', async (_event, skill) => {
-  if (!skill || typeof skill !== 'object') {
-    throw new Error('skill 配置无效');
-  }
-  return new Promise((resolve, reject) => {
-    const pythonCommand = process.env.PYTHON ?? 'python3';
-    const child = spawn(
-      pythonCommand,
-      [path.join(serverDir, 'agent_bridge.py'), '--upsert-skill'],
-      {
-        cwd: serverDir,
-        stdio: ['pipe', 'pipe', 'pipe'],
-      },
-    );
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    child.on('error', (error) => {
-      reject(new Error(`无法启动 Python: ${error.message}`));
-    });
-
-    child.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(stderr.trim() || `保存 skill 失败，退出码 ${code}`));
-        return;
-      }
-
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (error) {
-        reject(new Error(`解析 skill 结果失败: ${error.message}`));
-      }
-    });
-
-    child.stdin.write(JSON.stringify(skill));
-    child.stdin.end();
-  });
+ipcMain.handle('rag:clear', async () => {
+  return runPython(['--rag-clear']);
 });
 
 app.whenReady().then(() => {
@@ -271,3 +108,4 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+

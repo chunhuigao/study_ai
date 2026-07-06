@@ -1,1 +1,2 @@
-"""Python backend package for the Electron Agent."""
+"""Local Python helpers for the Electron learning app."""
+
