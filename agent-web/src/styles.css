@@ -53,6 +53,22 @@ body {
   margin-top: 12px;
 }
 
+.upload-card {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding: 22px 18px;
+  border: 1px dashed #b7c8ce;
+  border-radius: 8px;
+  background: #f8fbfc;
+  text-align: center;
+}
+
+.upload-icon {
+  color: #c34232;
+  font-size: 34px;
+}
+
 .section-head {
   display: flex;
   align-items: center;
@@ -161,4 +177,3 @@ body {
     height: 40px;
   }
 }
-

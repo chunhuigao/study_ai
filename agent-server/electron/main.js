@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -81,6 +81,24 @@ ipcMain.handle('rag:ingestPdf', async (_event, filePath) => {
   return runPython(['--rag-ingest-pdf', filePath]);
 });
 
+ipcMain.handle('rag:selectPdf', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showOpenDialog(win, {
+    title: '选择 PDF 资料',
+    properties: ['openFile'],
+    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+  });
+
+  if (result.canceled || !result.filePaths.length) {
+    return { ok: false, canceled: true };
+  }
+
+  return {
+    ok: true,
+    filePath: result.filePaths[0],
+  };
+});
+
 ipcMain.handle('rag:query', async (_event, payload) => {
   return runPython(['--rag-query'], payload || {});
 });
@@ -108,4 +126,3 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
-

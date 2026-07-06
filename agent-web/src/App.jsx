@@ -9,17 +9,15 @@ import {
   Layout,
   List,
   Space,
-  Spin,
   Typography,
-  Upload,
   message,
   theme,
 } from 'antd';
 import {
   ClearOutlined,
   FilePdfOutlined,
-  InboxOutlined,
   SearchOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
 import './styles.css';
@@ -27,7 +25,6 @@ import './styles.css';
 const { Header, Content, Sider } = Layout;
 const { Text, Title, Paragraph } = Typography;
 const { TextArea } = Input;
-const { Dragger } = Upload;
 
 function App() {
   const [documents, setDocuments] = useState([]);
@@ -55,14 +52,9 @@ function App() {
     loadDocuments().catch((err) => setError(String(err)));
   }, [loadDocuments]);
 
-  const uploadPdf = useCallback(
-    async (file) => {
+  const ingestPdf = useCallback(
+    async (filePath) => {
       setError('');
-      const filePath = file.path || file.originFileObj?.path;
-      if (!filePath) {
-        setError('请在 Electron 桌面窗口中上传 PDF，浏览器预览模式拿不到本地文件路径。');
-        return Upload.LIST_IGNORE;
-      }
 
       setIsUploading(true);
       try {
@@ -77,10 +69,27 @@ function App() {
       } finally {
         setIsUploading(false);
       }
-      return Upload.LIST_IGNORE;
     },
     [loadDocuments],
   );
+
+  const selectAndUploadPdf = useCallback(async () => {
+    setError('');
+    if (!window.ragApi?.selectPdf) {
+      setError('请使用 Electron 桌面窗口选择 PDF，浏览器预览模式无法打开本地文件选择器。');
+      return;
+    }
+
+    try {
+      const selected = await window.ragApi.selectPdf();
+      if (!selected.ok || selected.canceled) {
+        return;
+      }
+      await ingestPdf(selected.filePath);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, [ingestPdf]);
 
   const ask = useCallback(async () => {
     const text = question.trim();
@@ -142,19 +151,28 @@ function App() {
         <Layout className="app-main">
           <Sider width={360} className="library-panel" theme="light">
             <section className="panel-section">
-              <Dragger
-                accept=".pdf,application/pdf"
-                multiple={false}
-                showUploadList={false}
-                beforeUpload={uploadPdf}
-                disabled={!apiReady || isUploading}
-              >
-                <p className="ant-upload-drag-icon">
-                  {isUploading ? <Spin /> : <InboxOutlined />}
-                </p>
-                <p className="ant-upload-text">上传 PDF</p>
-                <p className="ant-upload-hint">文本型 PDF 会被抽取、切块并加入本地索引</p>
-              </Dragger>
+              <div className="upload-card">
+                <FilePdfOutlined className="upload-icon" />
+                <Text strong>上传 PDF</Text>
+                <Text type="secondary">文本型 PDF 会被抽取、切块并加入本地索引</Text>
+                <Button
+                  type="primary"
+                  icon={<UploadOutlined />}
+                  loading={isUploading}
+                  disabled={!apiReady}
+                  onClick={selectAndUploadPdf}
+                  block
+                >
+                  选择 PDF 文件
+                </Button>
+              </div>
+
+              <Alert
+                className="panel-alert"
+                type="info"
+                showIcon
+                message="后续扩展视频资料时，也会复用同一套索引和检索流程。"
+              />
 
               {!apiReady ? (
                 <Alert
@@ -269,4 +287,3 @@ function App() {
 }
 
 createRoot(document.getElementById('root')).render(<App />);
-
