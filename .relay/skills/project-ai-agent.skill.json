@@ -1,0 +1,11 @@
+{
+  "id": "project.ai_agent_learning",
+  "name": "Project AI Agent Learning",
+  "description": "项目级 skill：聚焦 Plan-Execute、ReAct、sub-agent、MCP 和 skill 扩展。",
+  "domains": ["concept", "research", "code"],
+  "prompt": "围绕 Relay 的架构目标输出学习路径和动手任务。",
+  "metadata": {
+    "level": "project"
+  }
+}
+

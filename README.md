@@ -1,54 +1,114 @@
-# AI RAG Learning
+# Relay
 
-这是一个面向 AI 初学者的本地 RAG 学习项目。当前版本只支持上传 PDF，后续可以沿用同一条数据链路扩展到视频、网页、Markdown 等资料类型。
+Relay 是一个用于学习 AI 的桌面 agent。它采用 Plan-Execute 架构：Plan-Agent 以 ReAct 风格规划任务，把复杂学习目标拆成子任务，再交给专门的 sub-agent 执行。前端通过 React + Electron + TypeScript 提供安装包式界面，服务端通过 Python + AgentScope 兼容层 + WebSocket 推送任务进度。
 
-## RAG 流程
+## 架构
+
+- `PlanAgent`：负责任务规划、协调和状态推进。
+- `ConceptTutorAgent`：解释概念、生成学习问题和复盘建议。
+- `ResearchAgent`：整理资料路径、官方文档和阅读顺序。
+- `CodeMentorAgent`：设计最小 demo、验收方式和下一步实践。
+- `SkillLoader`：按项目级、用户级、全局级、内置级四层加载 skill，前一层覆盖后一层。
+- `McpRegistry`：预留 MCP server 注册与工具发现入口。
+
+## 目录
 
 ```text
-上传 PDF
-  -> Python 抽取文本
-  -> 文本切成 chunk
-  -> 保存本地索引
-  -> 用户提问
-  -> 检索相关 chunk
-  -> 返回回答草稿和引用片段
+agent-server/relay/          Python agent 服务端
+agent-server/relay/agents/   Plan-Agent 与 sub-agent
+agent-server/relay/skills/   skill 加载机制
+agent-server/relay/mcp/      MCP 扩展注册表
+frontend/src/renderer/       React 界面
+.relay/skills/               项目级 skill
 ```
-
-当前实现刻意保持简单，没有引入向量数据库，也没有强依赖大模型。检索使用轻量关键词打分，方便学习 RAG 的完整骨架。
 
 ## 启动
 
-安装前端依赖：
-
-```bash
-pnpm install
-```
-
-安装 PDF 解析依赖：
-
-```bash
-pnpm setup:python
-```
-
-启动桌面应用：
+一键本地调试：
 
 ```bash
 pnpm start
 ```
 
-## 核心文件
+第一次运行会自动准备：
 
-- `agent-server/python/agent_server/rag.py`：PDF 抽取、切块、索引、检索、回答。
-- `agent-server/python/agent_server/bridge.py`：Electron 调 Python 的命令入口。
-- `agent-server/electron/main.js`：Electron 主进程和 IPC。
-- `agent-server/electron/preload.cjs`：暴露安全的 `window.ragApi`。
-- `agent-web/src/App.jsx`：RAG 上传和问答界面。
+- `agent-server/.venv`
+- 后端核心依赖
+- 前端 `node_modules`
 
-## 后续扩展视频
+启动后访问：
 
-视频资料可以新增一个 ingestion 函数：
+- 前端：`http://127.0.0.1:5173`
+- 后端：`http://127.0.0.1:8000`
+- WebSocket：`ws://127.0.0.1:8000/ws`
 
-1. 用音视频工具抽取音频。
-2. 用语音识别把音频转文字。
-3. 复用 `rag.py` 里的切块、保存索引、检索和问答逻辑。
+可选端口：
 
+```bash
+RELAY_API_PORT=8010 RELAY_WEB_PORT=5174 pnpm start
+```
+
+如果提示端口已占用，可以先查看占用进程：
+
+```bash
+lsof -nP -iTCP:8000 -sTCP:LISTEN
+```
+
+也可以直接换端口启动：
+
+```bash
+RELAY_API_PORT=8010 RELAY_WEB_PORT=5174 pnpm start
+```
+
+后端单独启动：
+
+```bash
+cd agent-server
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+uvicorn relay.server:app --reload --host 127.0.0.1 --port 8000
+```
+
+前端单独启动：
+
+```bash
+pnpm dev
+```
+
+如果要启用真正的 AgentScope runtime：
+
+```bash
+cd agent-server
+source .venv/bin/activate
+pip install -e '.[agentscope]'
+```
+
+打开界面后输入学习目标，例如：
+
+```text
+我想学习 AI agent、ReAct、MCP，并做一个 Python demo
+```
+
+Relay 会创建任务、生成计划、分派 sub-agent，并通过 WebSocket 实时显示进度。
+
+## Skill 扩展
+
+Relay 按顺序加载以下目录：
+
+1. 项目级：`./.relay/skills`
+2. 用户级：`~/.relay/skills`
+3. 全局级：`/etc/relay/skills`，也可以用 `RELAY_GLOBAL_SKILLS` 覆盖
+4. 内置级：`agent-server/relay/builtin_skills`
+
+skill 文件使用 `*.skill.json`：
+
+```json
+{
+  "id": "project.ai_agent_learning",
+  "name": "Project AI Agent Learning",
+  "description": "聚焦 Plan-Execute、ReAct、sub-agent、MCP 和 skill 扩展。",
+  "domains": ["concept", "research", "code"],
+  "prompt": "围绕 Relay 的架构目标输出学习路径和动手任务。"
+}
+```

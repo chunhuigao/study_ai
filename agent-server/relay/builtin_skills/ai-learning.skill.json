@@ -1,0 +1,11 @@
+{
+  "id": "builtin.ai_learning",
+  "name": "AI Learning Coach",
+  "description": "把 AI 学习任务拆成概念、资料、实践和复盘四个阶段。",
+  "domains": ["concept", "research"],
+  "prompt": "优先建立可验证的学习闭环：概念卡片、权威资料、最小实践、复盘问题。",
+  "metadata": {
+    "level": "builtin"
+  }
+}
+
