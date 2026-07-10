@@ -2,7 +2,7 @@ name: Sync to Gitee
 
 on:
   push:
-    branches: [main, study_agent, dev, dev/*] # 触发同步的分支
+    branches: [main, study_agent, dev, dev/*, study/*] # 触发同步的分支
 
 jobs:
   sync:
