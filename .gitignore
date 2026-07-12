@@ -1,9 +1,0 @@
-.DS_Store
-node_modules
-dist
-.pnpm-store
-__pycache__
-zhipu.py
-agent-server/config/model_config.json
-agent-server/config/skills.json
-agent-server/var/
