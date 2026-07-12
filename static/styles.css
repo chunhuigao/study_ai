@@ -1,0 +1,247 @@
+:root {
+  color-scheme: light;
+  --bg: #f5f6f1;
+  --panel: #ffffff;
+  --panel-soft: #eef1ea;
+  --ink: #202124;
+  --muted: #697168;
+  --line: #d9ded2;
+  --accent: #1f7a5c;
+  --accent-strong: #145a45;
+  --user: #e7f1ff;
+  --tool: #fff7df;
+  --error: #b42318;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background: var(--bg);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: minmax(220px, 290px) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 28px;
+  border-right: 1px solid var(--line);
+  background: var(--panel-soft);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.15;
+}
+
+.model-meta {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+}
+
+.model-meta div {
+  display: grid;
+  gap: 4px;
+}
+
+.model-meta dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.model-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+#reset-button {
+  width: 100%;
+  min-height: 42px;
+  margin-top: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+#reset-button:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.agent-panel {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 100vh;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  padding: 32px clamp(16px, 4vw, 56px);
+  overflow-y: auto;
+}
+
+.message {
+  display: flex;
+  width: 100%;
+}
+
+.message.user {
+  justify-content: flex-end;
+}
+
+.message.assistant,
+.message.tool,
+.message.error {
+  justify-content: flex-start;
+}
+
+.bubble {
+  max-width: min(780px, 86%);
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: 0 1px 2px rgb(32 33 36 / 6%);
+}
+
+.user .bubble {
+  border-color: #c5dcf4;
+  background: var(--user);
+}
+
+.tool .bubble {
+  border-color: #ead99c;
+  background: var(--tool);
+  font-size: 14px;
+}
+
+.error .bubble {
+  color: var(--error);
+  border-color: #f1b7b1;
+  background: #fff5f4;
+}
+
+.tool-title {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  gap: 12px;
+  padding: 16px clamp(16px, 4vw, 56px) 24px;
+  border-top: 1px solid var(--line);
+  background: rgb(255 255 255 / 78%);
+}
+
+textarea {
+  width: 100%;
+  max-height: 180px;
+  min-height: 48px;
+  resize: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 13px 14px;
+  color: var(--ink);
+  background: var(--panel);
+  outline: none;
+  line-height: 1.45;
+}
+
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(31 122 92 / 14%);
+}
+
+#send-button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  background: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+#send-button:hover {
+  background: var(--accent-strong);
+}
+
+#send-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .side-panel {
+    gap: 16px;
+    padding: 18px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .model-meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  .agent-panel {
+    min-height: calc(100vh - 218px);
+  }
+
+  .bubble {
+    max-width: 94%;
+  }
+
+  .composer {
+    grid-template-columns: 1fr;
+  }
+}

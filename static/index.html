@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LangGraph Agent</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="side-panel">
+        <div>
+          <p class="eyebrow">LangGraph</p>
+          <h1>Agent 应用</h1>
+        </div>
+
+        <dl class="model-meta">
+          <div>
+            <dt>Provider</dt>
+            <dd id="provider">读取中</dd>
+          </div>
+          <div>
+            <dt>Model</dt>
+            <dd id="model">读取中</dd>
+          </div>
+          <div>
+            <dt>Tools</dt>
+            <dd id="tools">读取中</dd>
+          </div>
+        </dl>
+
+        <button id="reset-button" type="button">新会话</button>
+      </aside>
+
+      <section class="agent-panel" aria-label="Agent 对话">
+        <div id="messages" class="messages" aria-live="polite">
+          <article class="message assistant">
+            <div class="bubble">
+              你好，我是一个 LangGraph Agent。可以聊天，也可以查询当前时间或做简单计算。
+            </div>
+          </article>
+        </div>
+
+        <form id="agent-form" class="composer">
+          <textarea
+            id="message-input"
+            rows="1"
+            placeholder="例如：现在上海几点？或者：帮我计算 (23 + 19) * 4"
+            autocomplete="off"
+          ></textarea>
+          <button id="send-button" type="submit">发送</button>
+        </form>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
