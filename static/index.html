@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LangChain Chatbot</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="side-panel">
+        <div>
+          <p class="eyebrow">LangChain</p>
+          <h1>聊天机器人</h1>
+        </div>
+        <dl class="model-meta">
+          <div>
+            <dt>Provider</dt>
+            <dd id="provider">读取中</dd>
+          </div>
+          <div>
+            <dt>Model</dt>
+            <dd id="model">读取中</dd>
+          </div>
+          <div>
+            <dt>API</dt>
+            <dd id="api-mode">读取中</dd>
+          </div>
+        </dl>
+        <button id="reset-button" class="ghost-button" type="button">清空会话</button>
+      </aside>
+
+      <section class="chat-panel" aria-label="聊天窗口">
+        <div id="messages" class="messages" aria-live="polite">
+          <article class="message assistant">
+            <div class="bubble">你好，我已经接入本地 cc switch 当前模型。你可以直接开始聊天。</div>
+          </article>
+        </div>
+
+        <form id="chat-form" class="composer">
+          <textarea
+            id="message-input"
+            name="message"
+            rows="1"
+            placeholder="输入消息..."
+            autocomplete="off"
+          ></textarea>
+          <button id="send-button" type="submit">发送</button>
+        </form>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
