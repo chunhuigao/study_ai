@@ -1,0 +1,2 @@
+"""PDF RAG chatbot application."""
+

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PDF RAG Chatbot</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="sidebar" aria-label="PDF 管理">
+        <div class="brand">
+          <div class="brand-mark">R</div>
+          <div>
+            <h1>PDF RAG Chatbot</h1>
+            <p id="runtimeMode">正在读取状态</p>
+          </div>
+        </div>
+
+        <form id="uploadForm" class="upload-panel">
+          <label class="drop-zone" for="pdfInput">
+            <input id="pdfInput" type="file" name="file" accept="application/pdf" />
+            <span class="upload-icon" aria-hidden="true">+</span>
+            <span id="fileLabel">选择 PDF</span>
+          </label>
+          <button id="uploadButton" type="submit">上传并入库</button>
+        </form>
+
+        <div class="status-strip">
+          <div>
+            <span class="metric" id="chunkCount">0</span>
+            <span class="label">chunks</span>
+          </div>
+          <div>
+            <span class="metric" id="docCount">0</span>
+            <span class="label">docs</span>
+          </div>
+        </div>
+
+        <div class="document-list" id="documentList" aria-label="已入库文档"></div>
+      </section>
+
+      <section class="chat-panel" aria-label="聊天">
+        <div id="messages" class="messages"></div>
+
+        <form id="chatForm" class="composer">
+          <input
+            id="questionInput"
+            type="text"
+            autocomplete="off"
+            placeholder="向已上传的 PDF 提问"
+          />
+          <select id="topK" aria-label="召回数量">
+            <option value="4">Top 4</option>
+            <option value="6" selected>Top 6</option>
+            <option value="8">Top 8</option>
+            <option value="10">Top 10</option>
+          </select>
+          <button id="sendButton" type="submit">发送</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="/static/app.js" type="module"></script>
+  </body>
+</html>
+
